@@ -207,15 +207,18 @@
 
       <div id="addPaste">
         <div class="hint">
-          한 줄에 한 단어씩. 구분자는 <code>|</code> · 탭 · <code>/</code> 모두 가능합니다.<br>
+          <b>① 사진으로 추가하기</b> — 수업 자료를 찍어 Claude 앱에 올리고, 아래 버튼으로 복사한 요청문을 함께 보내세요.
+          받은 JSON을 그대로 아래 칸에 붙여넣으면 됩니다.<br>
+          <b>② 직접 입력</b> — 한 줄에 한 단어씩, 구분자는 <code>|</code> · 탭 · <code>/</code>.<br>
           <b>단어[후리가나] | 품사 | 뜻 | 예문 | 예문 해석 | 레벨</b><br>
           예문의 한자도 <code>漢字[かんじ]</code> 형식으로 쓰면 후리가나가 위에 붙습니다. 뒤쪽 항목은 비워도 됩니다.
         </div>
+        <button class="btn block sm" id="btnCopyPrompt" style="margin-bottom:12px">📋 Claude에게 보낼 요청문 복사</button>
         <div class="field">
-          <label>붙여넣기</label>
+          <label>붙여넣기 (JSON도 그대로 인식합니다)</label>
           <textarea id="pasteBox" placeholder="大人[おとな] | n | 어른 | 大人[おとな]になったら、車[くるま]を運転[うんてん]したいです。 | 어른이 되면 차를 운전하고 싶어요. | N5"></textarea>
         </div>
-        <div class="field"><label>입력 날짜</label><input type="date" id="pasteDate"></div>
+        <div class="field"><label>입력 날짜</label><input type="date" id="pasteDate"><div class="hint" style="margin:6px 0 0;padding:8px 10px">JSON 안에 <code>date</code>가 있으면 그 날짜가 우선 적용됩니다.</div></div>
         <button class="btn primary block" id="btnPasteAdd">단어장에 추가</button>
         <button class="btn block" style="margin-top:8px" id="btnSample">샘플 14단어 넣어보기</button>
       </div>
@@ -390,7 +393,7 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v1.5';
+const APP_VER='v1.6';
 const APP_DATE='2026-09-02';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
@@ -581,11 +584,69 @@ $$('#addMode button').forEach(b=>b.onclick=()=>{
   $('#addForm').style.display=b.dataset.m==='form'?'':'none';
   $('#addFile').style.display=b.dataset.m==='file'?'':'none';
 });
+/* Claude가 돌려준 ```json 코드펜스를 벗겨낸다 */
+function stripFence(t){
+  return (t||'').trim()
+    .replace(/^```[a-zA-Z]*\s*/,'')
+    .replace(/```\s*$/,'')
+    .trim();
+}
 $('#btnPasteAdd').onclick=()=>{
-  const t=$('#pasteBox').value;
-  const arr=parseText(t,$('#pasteDate').value||todayStr());
-  if(arr.length){$('#pasteBox').value='';}
-  addWords(arr);
+  const raw=stripFence($('#pasteBox').value);
+  const date=$('#pasteDate').value||todayStr();
+  if(!raw){ toast('내용을 붙여넣어 주세요.'); return; }
+
+  /* [ 또는 { 로 시작하면 JSON으로 처리 (사진 → Claude → 복붙 흐름) */
+  if(/^[\[{]/.test(raw)){
+    let list;
+    try{
+      const j=JSON.parse(raw);
+      list=Array.isArray(j)?j:(j.words||j.단어||null);
+    }catch(err){
+      toast('JSON 형식이 올바르지 않습니다. 대괄호·따옴표가 빠지지 않았는지 확인해 주세요.');
+      return;
+    }
+    if(!Array.isArray(list)||!list.length){ toast('JSON에서 단어를 찾지 못했습니다.'); return; }
+    const n=addWords(list.map(o=>makeWord(Object.assign({date:date},o))));
+    if(n){ $('#pasteBox').value=''; go('home'); }
+    return;
+  }
+
+  const n=addWords(parseText(raw,date));
+  if(n){ $('#pasteBox').value=''; go('home'); }
+};
+
+/* 사진을 Claude에 올릴 때 함께 보낼 요청문 */
+const CLAUDE_PROMPT = [
+'첨부한 일본어 수업 자료의 단어를 아래 JSON 형식으로 정리해 줘.',
+'',
+'규칙',
+'- 후리가나가 단어와 줄이 분리돼 있으면 다시 합칠 것',
+'- "／"로 묶인 유의어는 각각 별도 단어로 분리할 것',
+'- 자료에 예문이 없으면 그 단어를 쓴 자연스러운 예문과 한국어 해석을 새로 만들어 줄 것',
+'- 예문의 한자는 반드시 한자[후리가나] 형식으로 쓸 것 (예: 大人[おとな]になりました。)',
+'- date는 수업 날짜를 YYYY-MM-DD로. 자료에 날짜가 없으면 생략',
+'- pos 코드: n 명사 / v 동사 / a い형용사 / na な형용사 / ad 부사 / e 표현',
+'- level은 JLPT 추정치 (N5~N1)',
+'- 설명 없이 JSON 배열만 출력할 것',
+'',
+'[',
+'  {"word":"継続","read":"けいぞく","pos":"n","mean":"계속, 지속",',
+'   "ex":"毎日[まいにち]の勉強[べんきょう]を継続[けいぞく]しています。",',
+'   "exKo":"매일 하는 공부를 계속하고 있습니다.",',
+'   "tip":"도중에 그만두지 않고 이어 가는 것","level":"N2","date":"2026-07-22"}',
+']'
+].join('\n');
+
+$('#btnCopyPrompt').onclick=async ()=>{
+  try{
+    await navigator.clipboard.writeText(CLAUDE_PROMPT);
+    toast('요청문을 복사했습니다. 사진과 함께 Claude에 붙여넣으세요.');
+  }catch(err){
+    /* 클립보드가 막힌 환경에서는 붙여넣기 칸에 넣어 직접 복사하게 한다 */
+    $('#pasteBox').value=CLAUDE_PROMPT;
+    toast('복사가 막혀 아래 칸에 넣었습니다. 길게 눌러 복사해 주세요.');
+  }
 };
 $('#btnFormAdd').onclick=()=>{
   const w=$('#fWord').value.trim(); if(!w){toast('단어를 입력해 주세요.');return;}
@@ -1088,4 +1149,4 @@ document.addEventListener('keydown',e=>{
 </script>
 </body>
 </html>
-<!-- 일본어 단어장 v1.5 (PWA) · 2026-09-02 -->
+<!-- 일본어 단어장 v1.6 (PWA) · 2026-09-02 -->

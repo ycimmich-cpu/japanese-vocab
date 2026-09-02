@@ -1,7 +1,7 @@
 /* 일본어 단어장 — service worker
    앱 껍데기를 캐시해 두어 인터넷이 없어도 실행되게 한다.
    앱을 새로 배포할 때는 CACHE 값을 올리면 이전 캐시가 정리된다. */
-const CACHE = 'jvocab-v2.0.0';
+const CACHE = 'jvocab-v2.1.0';
 const SHELL = [
   './',
   './index.html',

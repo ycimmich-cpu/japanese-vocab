@@ -62,6 +62,17 @@
   .grow{flex:1;min-width:0}
   .datehead{display:flex;align-items:baseline;gap:8px;margin:18px 2px 8px;font-weight:800}
   .datehead .n{font-size:12px;color:var(--sub);font-weight:600}
+  /* ---------- 월별 그룹 ---------- */
+  .monthhead{width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;margin:14px 0 8px;
+             background:var(--panel);border-radius:16px;box-shadow:var(--shadow);text-align:left}
+  .monthhead:first-child{margin-top:2px}
+  .monthhead .mtitle{font-size:15px;font-weight:800}
+  .monthhead .mmeta{font-size:12px;color:var(--sub);margin-top:2px}
+  .monthhead .chev{font-size:13px;color:var(--sub);transition:transform .2s;flex:none;width:18px;text-align:center}
+  .monthhead.open .chev{transform:rotate(90deg)}
+  .monthhead .mgo{font-size:12px;font-weight:800;padding:6px 11px;border-radius:999px;background:var(--soft);color:var(--ink);flex:none}
+  .monthbody{display:none;padding-left:2px}
+  .monthbody.on{display:block}
   .daycard{background:var(--panel);border-radius:18px;box-shadow:var(--shadow);padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;width:100%;text-align:left}
   .daycard:active{transform:scale(.995)}
   .daycard .d{font-size:16px;font-weight:800}
@@ -365,9 +376,11 @@
     <div class="field"><label>범위</label>
       <div class="seg" id="optScope">
         <button data-v="all" class="on">전체 기간</button>
+        <button data-v="month">특정 달</button>
         <button data-v="date">특정 날짜</button>
       </div>
     </div>
+    <div class="field" id="scopeMonthWrap" style="display:none"><label>달 선택</label><select id="scopeMonth"></select></div>
     <div class="field" id="scopeDateWrap" style="display:none"><label>날짜 선택</label><select id="scopeDate"></select></div>
     <div class="field"><label>순서</label>
       <div class="seg" id="optOrder">
@@ -397,7 +410,7 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v2.0';
+const APP_VER='v2.1';
 const APP_DATE='2026-09-02';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
@@ -503,7 +516,23 @@ function renderHome(){
   $('#stKnown').textContent=S.words.filter(w=>w.status==='known').length;
   const g=groupByDate(), box=$('#dayList');
   if(!g.length){ box.innerHTML='<div class="empty"><div class="big">📗</div>아직 단어가 없습니다.<br>아래 <b>추가</b>에서 단어를 넣어 보세요.</div>'; return; }
-  box.innerHTML=g.map(x=>{
+
+  /* 날짜를 월 단위로 묶는다. 날짜가 많아지면 홈이 너무 길어지므로 접어 둔다. */
+  const months=[];
+  g.forEach(x=>{
+    const key=x.date.slice(0,7);
+    let m=months.find(y=>y.key===key);
+    if(!m){ m={key:key, days:[], items:[]}; months.push(m); }
+    m.days.push(x); m.items=m.items.concat(x.items);
+  });
+
+  /* 펼침 상태. 사용자가 한 번도 건드리지 않았으면 "가장 최근 달만" 펼친다.
+     기본값을 미리 저장하지 않는 이유: 첫 실행 때 단어팩이 하나씩 등록되는 도중에도
+     이 함수가 불리므로, 그때 저장하면 가장 오래된 달이 기본값으로 굳어버린다. */
+  const openSet=Array.isArray(S.settings.openMonths)?S.settings.openMonths:[months[0].key];
+  const isOpen=k=>openSet.indexOf(k)>=0;
+
+  const dayCard=x=>{
     const learn=x.items.filter(w=>w.status==='learn').length;
     const known=x.items.filter(w=>w.status==='known').length;
     const nw=x.items.length-learn-known;
@@ -512,8 +541,36 @@ function renderHome(){
       '<div class="grow"><div class="d">'+x.date.replace(/-/g,'.')+' ('+wd+')</div>'+
       '<div class="meta">'+x.items.length+'단어 · 학습할게요 '+learn+' · 알고있어요 '+known+(nw?' · 미분류 '+nw:'')+'</div></div>'+
       '<span class="badge learn">▶ 학습</span></button>';
+  };
+
+  box.innerHTML=months.map(m=>{
+    const [y,mo]=m.key.split('-');
+    const learn=m.items.filter(w=>w.status==='learn').length;
+    const known=m.items.filter(w=>w.status==='known').length;
+    const open=isOpen(m.key);
+    return '<button class="monthhead'+(open?' open':'')+'" data-month="'+m.key+'">'+
+        '<span class="chev">▶</span>'+
+        '<span class="grow"><span class="mtitle">'+y+'년 '+Number(mo)+'월</span>'+
+        '<div class="mmeta">'+[m.days.length+'일', m.items.length+'단어',
+            (learn?'학습할게요 '+learn:''), (known?'알고있어요 '+known:'')
+          ].filter(Boolean).join(' · ')+'</div></span>'+
+        '<span class="mgo" data-mgo="'+m.key+'">▶ 이 달 학습</span>'+
+      '</button>'+
+      '<div class="monthbody'+(open?' on':'')+'" data-body="'+m.key+'">'+m.days.map(dayCard).join('')+'</div>';
   }).join('');
+
   $$('#dayList .daycard').forEach(b=>b.onclick=()=>{ openStart(b.dataset.date); });
+  $$('#dayList .monthhead').forEach(h=>h.onclick=e=>{
+    const go=e.target.closest('[data-mgo]');
+    if(go){ openStart(null, go.dataset.mgo); return; }   /* 이 달 전체 학습 */
+    const k=h.dataset.month;
+    const cur=openSet.slice(), i=cur.indexOf(k);
+    if(i>=0) cur.splice(i,1); else cur.push(k);
+    S.settings.openMonths=cur; save();
+    h.classList.toggle('open');
+    const body=$('#dayList [data-body="'+k+'"]');
+    if(body) body.classList.toggle('on');
+  });
 }
 
 /* ===================== 단어 목록 ===================== */
@@ -744,7 +801,7 @@ function openEdit(id){
 $('#editSheet').onclick=e=>{ if(e.target.id==='editSheet') $('#editSheet').classList.remove('on'); };
 
 /* ===================== 학습 시작 옵션 ===================== */
-const opt={mode:'card',status:'all',scope:'all',date:'',order:'seq',quiz:'jp2ko'};
+const opt={mode:'card',status:'all',scope:'all',date:'',month:'',order:'seq',quiz:'jp2ko'};
 function bindSeg(sel,key,after){
   $$(sel+' button').forEach(b=>b.onclick=()=>{
     $$(sel+' button').forEach(x=>x.classList.remove('on'));b.classList.add('on');opt[key]=b.dataset.v;after&&after();
@@ -752,16 +809,27 @@ function bindSeg(sel,key,after){
 }
 bindSeg('#optMode','mode',()=>{ $('#quizTypeWrap').style.display=opt.mode==='quiz'?'':'none'; });
 bindSeg('#optStatus','status');
-bindSeg('#optScope','scope',()=>{ $('#scopeDateWrap').style.display=opt.scope==='date'?'':'none'; });
+bindSeg('#optScope','scope',()=>{
+  $('#scopeDateWrap').style.display=opt.scope==='date'?'':'none';
+  $('#scopeMonthWrap').style.display=opt.scope==='month'?'':'none';
+});
 bindSeg('#optOrder','order');
 bindSeg('#optQuiz','quiz');
-function openStart(date){
+function openStart(date, month){
   const dates=[...new Set(S.words.map(w=>w.date))].sort().reverse();
   $('#scopeDate').innerHTML=dates.map(d=>'<option value="'+d+'">'+d.replace(/-/g,'.')+' ('+S.words.filter(w=>w.date===d).length+')</option>').join('');
+  const months=[...new Set(S.words.map(w=>(w.date||'').slice(0,7)))].filter(Boolean).sort().reverse();
+  $('#scopeMonth').innerHTML=months.map(m=>{
+    const [y,mo]=m.split('-');
+    return '<option value="'+m+'">'+y+'년 '+Number(mo)+'월 ('+S.words.filter(w=>(w.date||'').slice(0,7)===m).length+')</option>';
+  }).join('');
+  const pick=v=>$$('#optScope button').forEach(x=>x.classList.toggle('on',x.dataset.v===v));
   if(date){
     opt.scope='date'; opt.date=date; $('#scopeDate').value=date;
-    $$('#optScope button').forEach(x=>x.classList.toggle('on',x.dataset.v==='date'));
-    $('#scopeDateWrap').style.display='';
+    pick('date'); $('#scopeDateWrap').style.display=''; $('#scopeMonthWrap').style.display='none';
+  } else if(month){
+    opt.scope='month'; opt.month=month; $('#scopeMonth').value=month;
+    pick('month'); $('#scopeMonthWrap').style.display=''; $('#scopeDateWrap').style.display='none';
   }
   $('#startSheet').classList.add('on');
 }
@@ -771,8 +839,10 @@ $('#btnStudyAll').onclick=()=>openStart();
 $('#btnStudyFiltered').onclick=()=>{ const arr=filteredWords(); if(!arr.length){toast('학습할 단어가 없습니다.');return;} startCard(arr.slice()); };
 $('#btnStartGo').onclick=()=>{
   opt.date=$('#scopeDate').value||opt.date;
+  opt.month=$('#scopeMonth').value||opt.month;
   let pool=S.words.slice();
   if(opt.scope==='date') pool=pool.filter(w=>w.date===opt.date);
+  if(opt.scope==='month') pool=pool.filter(w=>(w.date||'').slice(0,7)===opt.month);
   if(opt.status!=='all') pool=pool.filter(w=>w.status===opt.status);
   if($('#optFav').checked) pool=pool.filter(w=>w.fav);
   if(!pool.length){ toast('조건에 맞는 단어가 없습니다.'); return; }
@@ -1982,7 +2052,8 @@ $$('.verline').forEach(el=>el.textContent=VER_TEXT);
 document.title=APP_NAME+' '+APP_VER;
 ['#pasteDate','#fDate','#fileDate'].forEach(s=>{ const el=$(s); if(el) el.value=todayStr(); });
 renderHome();
-if(_ins.n) setTimeout(()=>toast('내장 단어를 등록했습니다 · '+_ins.names.join(', ')),400);
+/* 팩 이름을 전부 나열하면 알림이 화면을 덮으므로 개수만 요약한다 */
+if(_ins.n) setTimeout(()=>toast('수업 '+_ins.names.length+'회분 · '+_ins.n+'단어를 등록했습니다.'),400);
 
 /* ===================== PWA: 설치 · 오프라인 ===================== */
 (function(){
@@ -2064,4 +2135,4 @@ document.addEventListener('keydown',e=>{
 </script>
 </body>
 </html>
-<!-- 일본어 단어장 v2.0 (PWA) · 2026-09-02 -->
+<!-- 일본어 단어장 v2.1 (PWA) · 2026-09-02 -->

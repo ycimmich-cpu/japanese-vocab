@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111213">
+<title>일본어 단어장</title>
+
+<!-- ===== PWA (홈화면 설치 · 오프라인) ===== -->
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="description" content="수업에서 배운 일본어 단어를 날짜별로 묶어 카드와 퀴즈로 학습합니다.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="단어장">
+<style>
+  :root{
+    --bg:#eceef1; --panel:#ffffff; --ink:#16181d; --sub:#6b7280; --line:#e5e7eb;
+    --accent:#111213; --accent-ink:#ffffff; --soft:#f3f4f6; --ok:#16a34a; --warn:#d97706;
+    --learn:#111213; --known:#ffffff; --radius:22px;
+    --shadow:0 2px 14px rgba(15,23,42,.08);
+    --jp:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic","Meiryo","Malgun Gothic",sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0e0f12; --panel:#17191e; --ink:#f2f4f7; --sub:#9aa2af; --line:#262a31;
+           --accent:#f2f4f7; --accent-ink:#111213; --soft:#20232a; --shadow:0 2px 14px rgba(0,0,0,.4); }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:"Pretendard","Malgun Gothic",var(--jp);
+       font-size:15px;line-height:1.5;overscroll-behavior-y:none}
+  button,input,select,textarea{font:inherit;color:inherit}
+  button{cursor:pointer;border:none;background:none}
+  .app{max-width:520px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;position:relative;background:var(--bg)}
+  .screen{display:none;flex:1;flex-direction:column}
+  .screen.on{display:flex}
+
+  /* ---------- 공통 헤더 ---------- */
+  .topbar{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+  .topbar h1{font-size:17px;margin:0;font-weight:700;flex:1}
+  .iconbtn{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:18px;color:var(--ink)}
+  .iconbtn:hover{background:var(--soft)}
+  .pill{display:inline-flex;align-items:center;gap:6px;background:var(--soft);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600}
+  .pill.green{background:rgba(22,163,74,.12);color:#15803d}
+  .pill.red{background:rgba(220,38,38,.10);color:#b91c1c}
+  .body{flex:1;padding:14px 14px 96px}
+  .muted{color:var(--sub)}
+  .center{text-align:center}
+
+  /* ---------- 하단 탭 ---------- */
+  .tabbar{position:sticky;bottom:0;display:flex;background:var(--panel);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+  .tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;font-size:11px;color:var(--sub);border-radius:12px}
+  .tabbar button .ic{font-size:19px}
+  .tabbar button.on{color:var(--ink);font-weight:700}
+
+  /* ---------- 카드/리스트 ---------- */
+  .card{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:12px}
+  .row{display:flex;align-items:center;gap:10px}
+  .grow{flex:1;min-width:0}
+  .datehead{display:flex;align-items:baseline;gap:8px;margin:18px 2px 8px;font-weight:800}
+  .datehead .n{font-size:12px;color:var(--sub);font-weight:600}
+  .daycard{background:var(--panel);border-radius:18px;box-shadow:var(--shadow);padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;width:100%;text-align:left}
+  .daycard:active{transform:scale(.995)}
+  .daycard .d{font-size:16px;font-weight:800}
+  .daycard .meta{font-size:12px;color:var(--sub);margin-top:3px}
+  .badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--soft);color:var(--sub)}
+  .badge.learn{background:#111213;color:#fff}
+  .badge.known{background:rgba(22,163,74,.14);color:#15803d}
+  @media (prefers-color-scheme: dark){ .badge.learn{background:#f2f4f7;color:#111} }
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:14px;padding:11px 16px;font-weight:700;background:var(--soft)}
+  .btn.primary{background:var(--accent);color:var(--accent-ink)}
+  .btn.block{width:100%}
+  .btn.sm{padding:7px 12px;font-size:13px;border-radius:11px}
+  .field{margin-bottom:10px}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:4px}
+  .field input,.field select,.field textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:13px;background:var(--panel);outline:none}
+  .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--ink)}
+  textarea{resize:vertical;min-height:120px;font-family:var(--jp)}
+  .seg{display:flex;background:var(--soft);border-radius:14px;padding:4px;gap:4px}
+  .seg button{flex:1;padding:9px 6px;border-radius:11px;font-size:13px;font-weight:700;color:var(--sub)}
+  .seg button.on{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+  #listFilter button{font-size:12px;padding:9px 2px}
+
+  /* ---------- 학습 카드(스크린샷 레이아웃) ---------- */
+  #studyScreen{background:var(--bg)}
+  .studybar{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel)}
+  .progressline{height:3px;background:var(--line)}
+  .progressline > i{display:block;height:100%;background:var(--ink);transition:width .25s}
+  .studywrap{flex:1;display:flex;flex-direction:column;padding:14px 14px 0;overflow:auto}
+  .flash{background:var(--panel);border-radius:26px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+  .flash .pic{position:relative;aspect-ratio:1.2/1;background:linear-gradient(140deg,#2b2f36,#0f1114);display:grid;place-items:center}
+  .flash .pic img{width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(1) contrast(1.05)}
+  .flash .pic .kanjiart{font-family:var(--jp);font-size:96px;font-weight:800;color:rgba(255,255,255,.9);letter-spacing:4px}
+  .flash .pic .mark{position:absolute;right:14px;bottom:14px;width:44px;height:44px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.2);font-size:18px;color:#111}
+  .flash .pic .mark.on{background:#111;color:#fff}
+  .flash .info{padding:22px 20px 20px}
+  .wordline{display:flex;align-items:flex-start;gap:10px}
+  .word{font-family:var(--jp);font-size:42px;font-weight:800;line-height:1.15;letter-spacing:1px}
+  .reading{font-family:var(--jp);color:var(--sub);font-size:14px;margin-top:6px}
+  .meaning{margin-top:12px;font-size:18px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .pos{width:20px;height:20px;border-radius:50%;background:var(--soft);color:var(--sub);font-size:11px;font-weight:800;display:grid;place-items:center;flex:none}
+  .sep{height:1px;background:var(--line);margin:18px 0 16px}
+  .exline{display:flex;gap:10px;align-items:flex-start}
+  .ex{font-family:var(--jp);font-size:19px;line-height:1.95;flex:1}
+  .ex ruby rt{font-size:11px;color:var(--sub);font-weight:500}
+  .ex .hl{border-bottom:2px dotted var(--sub)}
+  .extr{margin-top:10px;font-weight:700}
+  .extr b{font-weight:800}
+  .flash .foot{display:flex;align-items:flex-end;justify-content:space-between;padding:14px 20px 18px}
+  .lvl{font-size:12px;color:var(--sub);font-weight:700}
+  .tipbtn{background:var(--soft);border-radius:12px 0 0 12px;padding:8px 12px;font-size:13px;font-weight:700;display:flex;gap:4px;align-items:center;margin-right:-20px}
+  .speak{width:44px;height:44px;border-radius:50%;background:var(--soft);display:grid;place-items:center;flex:none}
+  .speak:active{transform:scale(.94)}
+  .speak svg{width:20px;height:20px}
+  .answerbar{display:flex;gap:12px;padding:14px 14px calc(18px + env(safe-area-inset-bottom));background:var(--bg);position:sticky;bottom:0}
+  .ansbtn{flex:1;border-radius:20px;padding:18px 10px;font-size:17px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:var(--shadow)}
+  .ansbtn.known{background:var(--panel);color:var(--ink);flex:0 0 42%}
+  .ansbtn.learn{background:#111213;color:#fff}
+  @media (prefers-color-scheme: dark){ .ansbtn.learn{background:#f2f4f7;color:#111} }
+  .ring{position:relative;width:26px;height:26px}
+  .ring svg{transform:rotate(-90deg)}
+  .ring span{position:absolute;inset:0;display:grid;place-items:center;font-size:11px;font-weight:800}
+
+  /* ---------- 퀴즈 ---------- */
+  .qprompt{font-family:var(--jp);font-size:40px;font-weight:800;text-align:center;padding:26px 10px 6px}
+  .qsub{text-align:center;color:var(--sub);font-family:var(--jp)}
+  .opt{width:100%;text-align:left;background:var(--panel);border:2px solid transparent;border-radius:16px;padding:15px 16px;margin-bottom:10px;box-shadow:var(--shadow);font-weight:600}
+  .opt.correct{border-color:var(--ok);background:rgba(22,163,74,.10)}
+  .opt.wrong{border-color:#dc2626;background:rgba(220,38,38,.08)}
+
+  /* ---------- 모달/토스트 ---------- */
+  .sheet{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-end;justify-content:center;z-index:60}
+  .sheet.on{display:flex}
+  .sheet .inner{background:var(--panel);width:100%;max-width:520px;border-radius:24px 24px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto}
+  .sheet h3{margin:2px 0 14px;font-size:16px}
+  .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(10px);background:#111;color:#fff;padding:11px 16px;border-radius:14px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.22s;z-index:80;max-width:88%}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  .empty{text-align:center;color:var(--sub);padding:60px 20px}
+  .empty .big{font-size:40px;margin-bottom:10px}
+  .wlist{background:var(--panel);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px}
+  .witem{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .witem:last-child{border-bottom:none}
+  .witem .jp{font-family:var(--jp);font-size:19px;font-weight:700}
+  .witem .rd{font-family:var(--jp);font-size:11px;color:var(--sub)}
+  .stat{display:flex;gap:10px;margin-bottom:14px}
+  .stat .box{flex:1;background:var(--panel);border-radius:18px;box-shadow:var(--shadow);padding:14px;text-align:center}
+  .stat .box .n{font-size:24px;font-weight:800}
+  .stat .box .l{font-size:11px;color:var(--sub);font-weight:700;margin-top:2px}
+  .hint{font-size:12px;color:var(--sub);line-height:1.7;background:var(--soft);padding:12px 14px;border-radius:14px;margin-bottom:12px}
+  .verline{text-align:center;color:var(--sub);font-size:11px;letter-spacing:.2px;padding:22px 0 6px;opacity:.85}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:var(--soft);padding:1px 5px;border-radius:6px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ================= 홈: 날짜별 ================= -->
+  <section id="homeScreen" class="screen on">
+    <div class="topbar">
+      <h1>일본어 단어장</h1>
+      <button class="iconbtn" id="btnStudyAll" title="전체 학습">▶</button>
+      <button class="iconbtn" onclick="go('settings')" title="설정">⚙</button>
+    </div>
+    <div class="body">
+      <div class="stat">
+        <div class="box"><div class="n" id="stTotal">0</div><div class="l">전체 단어</div></div>
+        <div class="box"><div class="n" id="stLearn">0</div><div class="l">학습할게요</div></div>
+        <div class="box"><div class="n" id="stKnown">0</div><div class="l">알고 있어요</div></div>
+      </div>
+      <div id="dayList"></div>
+      <div class="verline" id="homeVer"></div>
+    </div>
+  </section>
+
+  <!-- ================= 단어장 목록 ================= -->
+  <section id="listScreen" class="screen">
+    <div class="topbar">
+      <h1>단어 목록</h1>
+      <button class="iconbtn" id="btnStudyFiltered" title="이 목록 학습">▶</button>
+    </div>
+    <div class="body">
+      <div class="field"><input id="searchBox" placeholder="단어 · 후리가나 · 뜻 검색"></div>
+      <div class="seg" id="listFilter" style="margin-bottom:12px">
+        <button data-f="all" class="on">전체</button>
+        <button data-f="learn">학습할게요</button>
+        <button data-f="known">알고 있어요</button>
+        <button data-f="new">미분류</button>
+        <button data-f="fav">★ 즐겨찾기</button>
+      </div>
+      <div id="wordList"></div>
+    </div>
+  </section>
+
+  <!-- ================= 추가 ================= -->
+  <section id="addScreen" class="screen">
+    <div class="topbar"><h1>단어 추가</h1></div>
+    <div class="body">
+      <div class="seg" id="addMode" style="margin-bottom:14px">
+        <button data-m="paste" class="on">붙여넣기</button>
+        <button data-m="form">직접 입력</button>
+        <button data-m="file">파일</button>
+      </div>
+
+      <div id="addPaste">
+        <div class="hint">
+          한 줄에 한 단어씩. 구분자는 <code>|</code> · 탭 · <code>/</code> 모두 가능합니다.<br>
+          <b>단어[후리가나] | 품사 | 뜻 | 예문 | 예문 해석 | 레벨</b><br>
+          예문의 한자도 <code>漢字[かんじ]</code> 형식으로 쓰면 후리가나가 위에 붙습니다. 뒤쪽 항목은 비워도 됩니다.
+        </div>
+        <div class="field">
+          <label>붙여넣기</label>
+          <textarea id="pasteBox" placeholder="大人[おとな] | n | 어른 | 大人[おとな]になったら、車[くるま]を運転[うんてん]したいです。 | 어른이 되면 차를 운전하고 싶어요. | N5"></textarea>
+        </div>
+        <div class="field"><label>입력 날짜</label><input type="date" id="pasteDate"></div>
+        <button class="btn primary block" id="btnPasteAdd">단어장에 추가</button>
+        <button class="btn block" style="margin-top:8px" id="btnSample">샘플 14단어 넣어보기</button>
+      </div>
+
+      <div id="addForm" style="display:none">
+        <div class="field"><label>단어 (한자/가나)</label><input id="fWord" placeholder="大人"></div>
+        <div class="field"><label>후리가나</label><input id="fRead" placeholder="おとな"></div>
+        <div class="row" style="gap:10px">
+          <div class="field grow"><label>품사</label>
+            <select id="fPos"><option value="n">명사 (n)</option><option value="v">동사 (v)</option>
+            <option value="a">い형용사 (a)</option><option value="na">な형용사 (na)</option>
+            <option value="ad">부사 (ad)</option><option value="e">표현 (e)</option></select></div>
+          <div class="field grow"><label>레벨</label>
+            <select id="fLevel"><option>N5</option><option>N4</option><option>N3</option><option>N2</option><option>N1</option><option value="">-</option></select></div>
+        </div>
+        <div class="field"><label>뜻</label><input id="fMean" placeholder="어른"></div>
+        <div class="field"><label>예문 (한자[후리가나] 형식)</label><input id="fEx" placeholder="大人[おとな]になったら、車[くるま]を運転[うんてん]したいです。"></div>
+        <div class="field"><label>예문 해석</label><input id="fExKo" placeholder="어른이 되면 차를 운전하고 싶어요."></div>
+        <div class="field"><label>팁 / 메모 (선택)</label><input id="fTip" placeholder="子供(こども)의 반대말"></div>
+        <div class="field"><label>이미지 (선택)</label><input type="file" id="fImg" accept="image/*"></div>
+        <div class="field"><label>입력 날짜</label><input type="date" id="fDate"></div>
+        <button class="btn primary block" id="btnFormAdd">추가하기</button>
+      </div>
+
+      <div id="addFile" style="display:none">
+        <div class="hint">
+          <b>텍스트(.txt/.csv) · JSON(.json)</b> 파일은 여기서 바로 읽습니다.<br>
+          <b>사진 · PDF · 워드</b>는 Claude 대화창에 그대로 올려 주세요. 단어·뜻·예문으로 정리한 <code>.json</code> 파일을 만들어 드리면, 그 파일을 여기서 불러오면 됩니다.
+        </div>
+        <div class="field"><label>파일 선택</label><input type="file" id="fileInput" accept=".txt,.csv,.json,.tsv"></div>
+        <div class="field"><label>입력 날짜</label><input type="date" id="fileDate"></div>
+        <button class="btn primary block" id="btnFileAdd">파일에서 추가</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 학습 카드 ================= -->
+  <section id="studyScreen" class="screen">
+    <div class="studybar">
+      <button class="iconbtn" id="btnStudyBack">‹</button>
+      <div class="grow row" style="justify-content:center;gap:8px">
+        <span class="pill red" id="pillSkip">🗑 <b id="skipCnt">0</b></span>
+        <span class="pill green">✓ <b id="doneCnt">0</b> / <b id="totalCnt">0</b></span>
+      </div>
+      <button class="iconbtn" id="btnUndo" title="되돌리기">↺</button>
+      <button class="iconbtn" id="btnStudyMenu" title="메뉴">⋮</button>
+    </div>
+    <div class="progressline"><i id="progBar" style="width:0%"></i></div>
+    <div class="studywrap">
+      <div class="flash" id="flash"></div>
+      <div style="height:14px"></div>
+    </div>
+    <div class="answerbar">
+      <button class="ansbtn known" id="btnKnown">알고 있어요</button>
+      <button class="ansbtn learn" id="btnLearn">학습할게요 <span class="ring" id="ring"></span></button>
+    </div>
+  </section>
+
+  <!-- ================= 퀴즈 ================= -->
+  <section id="quizScreen" class="screen">
+    <div class="studybar">
+      <button class="iconbtn" id="btnQuizBack">‹</button>
+      <div class="grow row" style="justify-content:center">
+        <span class="pill green">✓ <b id="qCorrect">0</b> / <b id="qDone">0</b></span>
+      </div>
+      <button class="iconbtn" id="btnQuizSpeak">🔊</button>
+    </div>
+    <div class="progressline"><i id="qProg" style="width:0%"></i></div>
+    <div class="body" id="quizBody"></div>
+  </section>
+
+  <!-- ================= 설정 ================= -->
+  <section id="settingsScreen" class="screen">
+    <div class="topbar"><button class="iconbtn" onclick="go('home')">‹</button><h1>설정</h1></div>
+    <div class="body">
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:10px">발음 (TTS)</div>
+        <div class="field"><label>일본어 음성</label><select id="voiceSel"></select></div>
+        <div class="field"><label>말하기 속도 <b id="rateVal">0.9</b></label><input type="range" id="rateSel" min="0.5" max="1.3" step="0.05" value="0.9"></div>
+        <label class="row" style="margin-top:6px"><input type="checkbox" id="autoSpeak" style="width:auto"> <span>카드가 뜨면 단어를 자동으로 읽어주기</span></label>
+        <label class="row" style="margin-top:8px"><input type="checkbox" id="autoSpeakEx" style="width:auto"> <span>이어서 예문도 읽어주기</span></label>
+        <button class="btn sm" style="margin-top:12px" id="btnTestVoice">발음 테스트</button>
+      </div>
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:10px">학습 카드</div>
+        <label class="row"><input type="checkbox" id="autoAdvance" style="width:auto"> <span>자동 넘김 사용</span></label>
+        <div class="field" style="margin-top:10px"><label>자동 넘김 시간 <b id="advVal">7</b>초</label><input type="range" id="advSec" min="3" max="20" step="1" value="7"></div>
+        <label class="row"><input type="checkbox" id="hideMeaning" style="width:auto"> <span>뜻을 먼저 가리고 보기 (탭하면 표시)</span></label>
+      </div>
+      <div class="card" id="installCard" style="display:none">
+        <div style="font-weight:800;margin-bottom:10px">휴대폰·PC에 설치</div>
+        <button class="btn block sm primary" id="btnInstall" style="display:none">홈 화면에 추가</button>
+        <div class="hint" id="installHint" style="margin:12px 0 0"></div>
+      </div>
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:10px">데이터</div>
+        <button class="btn block sm" id="btnExport">전체 백업 내보내기 (.json)</button>
+        <div style="height:8px"></div>
+        <button class="btn block sm" id="btnImport">백업 불러오기</button>
+        <input type="file" id="importInput" accept=".json" style="display:none">
+        <div style="height:8px"></div>
+        <button class="btn block sm" id="btnPacks">앱에 담긴 수업 단어 불러오기</button>
+        <div style="height:8px"></div>
+        <button class="btn block sm" id="btnReset" style="color:#b91c1c">전체 삭제</button>
+        <div class="hint" style="margin:12px 0 0">데이터는 이 기기의 브라우저 안에 저장되며, PC와 휴대폰은 따로 관리됩니다. <b>앱 파일을 새 버전으로 바꾸기 전에 백업을 먼저 내보내 주세요.</b> 휴대폰으로 옮길 때도 백업 파일을 내보낸 뒤 휴대폰에서 불러오면 됩니다.</div>
+      </div>
+      <div class="verline" id="setVer"></div>
+    </div>
+  </section>
+
+  <!-- ================= 하단 탭 ================= -->
+  <nav class="tabbar" id="tabbar">
+    <button data-go="home" class="on"><span class="ic">📅</span>날짜별</button>
+    <button data-go="list"><span class="ic">📚</span>단어장</button>
+    <button data-go="add"><span class="ic">＋</span>추가</button>
+    <button data-go="startStudy"><span class="ic">🎯</span>학습</button>
+    <button data-go="settings"><span class="ic">⚙</span>설정</button>
+  </nav>
+</div>
+
+<!-- 학습 시작 시트 -->
+<div class="sheet" id="startSheet">
+  <div class="inner">
+    <h3>학습 시작</h3>
+    <div class="field"><label>모드</label>
+      <div class="seg" id="optMode">
+        <button data-v="card" class="on">카드 학습</button>
+        <button data-v="quiz">퀴즈</button>
+      </div>
+    </div>
+    <div class="field"><label>무엇을 학습할까요?</label>
+      <div class="seg" id="optStatus">
+        <button data-v="all" class="on">전체</button>
+        <button data-v="learn">학습할게요만</button>
+        <button data-v="known">알고있어요만</button>
+        <button data-v="new">미분류만</button>
+      </div>
+    </div>
+    <label class="row" style="margin:-2px 2px 12px"><input type="checkbox" id="optFav" style="width:auto"> <span>★ 즐겨찾기한 단어만</span></label>
+    <div class="field"><label>범위</label>
+      <div class="seg" id="optScope">
+        <button data-v="all" class="on">전체 기간</button>
+        <button data-v="date">특정 날짜</button>
+      </div>
+    </div>
+    <div class="field" id="scopeDateWrap" style="display:none"><label>날짜 선택</label><select id="scopeDate"></select></div>
+    <div class="field"><label>순서</label>
+      <div class="seg" id="optOrder">
+        <button data-v="seq" class="on">입력순</button>
+        <button data-v="rand">랜덤</button>
+      </div>
+    </div>
+    <div class="field" id="quizTypeWrap" style="display:none"><label>퀴즈 유형</label>
+      <div class="seg" id="optQuiz">
+        <button data-v="jp2ko" class="on">단어→뜻</button>
+        <button data-v="ko2jp">뜻→단어</button>
+        <button data-v="listen">듣고 맞추기</button>
+      </div>
+    </div>
+    <div class="row" style="gap:10px;margin-top:16px">
+      <button class="btn grow" id="btnStartCancel">취소</button>
+      <button class="btn primary grow" id="btnStartGo">시작</button>
+    </div>
+  </div>
+</div>
+
+<!-- 단어 상세/편집 시트 -->
+<div class="sheet" id="editSheet"><div class="inner" id="editInner"></div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== 버전 정보 ===================== */
+const APP_NAME='일본어 단어장';
+const APP_VER='v1.5';
+const APP_DATE='2026-09-02';   /* 마지막 수정일 */
+
+/* ===================== 저장소 ===================== */
+const KEY='jvocab.v1';
+const DEF_SET={voice:'',rate:0.9,autoSpeak:true,autoSpeakEx:false,autoAdvance:false,advSec:7,hideMeaning:false};
+let S={words:[],settings:Object.assign({},DEF_SET),installed:[]};
+function load(){
+  try{const r=localStorage.getItem(KEY); if(r){const o=JSON.parse(r); S.words=o.words||[]; S.settings=Object.assign({},DEF_SET,o.settings||{}); S.installed=o.installed||[];}}
+  catch(e){console.warn('load fail',e);}
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(S));}
+  catch(e){toast('저장 공간이 가득 찼습니다. 이미지를 줄이거나 백업 후 정리해 주세요.');}
+}
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2200);}
+function todayStr(d){const x=d?new Date(d):new Date();return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+const POS_KO={n:'명사',v:'동사',a:'い형용사',na:'な형용사',ad:'부사',e:'표현'};
+
+/* ===================== 후리가나 루비 ===================== */
+function ruby(text,hl){
+  if(!text) return '';
+  let out='',i=0;
+  const re=/([一-鿿々〆ヵヶヶヵ]+)\[([^\]]+)\]/g;
+  let m;
+  while((m=re.exec(text))!==null){
+    out+=esc(text.slice(i,m.index));
+    const base=esc(m[1]), rt=esc(m[2]);
+    const mark=(hl&&stripRuby(hl).indexOf(m[1])===0)?' class="hl"':'';
+    out+='<ruby'+mark+'>'+base+'<rt>'+rt+'</rt></ruby>';
+    i=m.index+m[0].length;
+  }
+  out+=esc(text.slice(i));
+  return out;
+}
+function stripRuby(t){return (t||'').replace(/\[[^\]]*\]/g,'');}
+
+/* ===================== 발음(TTS) ===================== */
+let voices=[];
+function loadVoices(){
+  voices=(window.speechSynthesis?speechSynthesis.getVoices():[]).filter(v=>/ja|jp/i.test(v.lang));
+  const sel=$('#voiceSel'); if(!sel) return;
+  sel.innerHTML = voices.length? voices.map(v=>'<option value="'+esc(v.voiceURI)+'">'+esc(v.name)+' ('+v.lang+')</option>').join('')
+                              : '<option value="">일본어 음성을 찾지 못했습니다</option>';
+  if(S.settings.voice) sel.value=S.settings.voice;
+}
+if(window.speechSynthesis){ speechSynthesis.onvoiceschanged=loadVoices; }
+function speak(text,cb){
+  let done=false;
+  const fin=()=>{ if(done) return; done=true; cb&&cb(); };
+  if(!window.speechSynthesis||!text){ fin(); return; }
+  const t=stripRuby(text);
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(t);
+  u.lang='ja-JP'; u.rate=S.settings.rate||0.9;
+  const v=voices.find(v=>v.voiceURI===S.settings.voice)||voices[0];
+  if(v) u.voice=v;
+  u.onend=fin; u.onerror=fin;
+  speechSynthesis.speak(u);
+  /* 음성이 없거나 끝 이벤트가 오지 않는 경우를 대비한 안전장치 */
+  setTimeout(fin, Math.min(15000, 1200 + t.length*420/(S.settings.rate||0.9)));
+}
+
+/* ===================== 화면 전환 ===================== */
+function go(name){
+  if(name==='startStudy'){ openStart(); return; }
+  $$('.screen').forEach(s=>s.classList.remove('on'));
+  const map={home:'#homeScreen',list:'#listScreen',add:'#addScreen',study:'#studyScreen',quiz:'#quizScreen',settings:'#settingsScreen'};
+  $(map[name]).classList.add('on');
+  $('#tabbar').style.display=(name==='study'||name==='quiz')?'none':'flex';
+  $$('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.go===name));
+  if(name==='home') renderHome();
+  if(name==='list') renderList();
+  if(name==='settings') renderSettings();
+  window.scrollTo(0,0);
+}
+window.go=go;
+$$('#tabbar button').forEach(b=>b.onclick=()=>go(b.dataset.go));
+
+/* ===================== 홈(날짜별) ===================== */
+function groupByDate(){
+  const g={};
+  S.words.forEach(w=>{(g[w.date]=g[w.date]||[]).push(w);});
+  return Object.keys(g).sort().reverse().map(d=>({date:d,items:g[d]}));
+}
+function renderHome(){
+  $('#stTotal').textContent=S.words.length;
+  $('#stLearn').textContent=S.words.filter(w=>w.status==='learn').length;
+  $('#stKnown').textContent=S.words.filter(w=>w.status==='known').length;
+  const g=groupByDate(), box=$('#dayList');
+  if(!g.length){ box.innerHTML='<div class="empty"><div class="big">📗</div>아직 단어가 없습니다.<br>아래 <b>추가</b>에서 단어를 넣어 보세요.</div>'; return; }
+  box.innerHTML=g.map(x=>{
+    const learn=x.items.filter(w=>w.status==='learn').length;
+    const known=x.items.filter(w=>w.status==='known').length;
+    const nw=x.items.length-learn-known;
+    const wd=['일','월','화','수','목','금','토'][new Date(x.date+'T00:00:00').getDay()];
+    return '<button class="daycard" data-date="'+x.date+'">'+
+      '<div class="grow"><div class="d">'+x.date.replace(/-/g,'.')+' ('+wd+')</div>'+
+      '<div class="meta">'+x.items.length+'단어 · 학습할게요 '+learn+' · 알고있어요 '+known+(nw?' · 미분류 '+nw:'')+'</div></div>'+
+      '<span class="badge learn">▶ 학습</span></button>';
+  }).join('');
+  $$('#dayList .daycard').forEach(b=>b.onclick=()=>{ openStart(b.dataset.date); });
+}
+
+/* ===================== 단어 목록 ===================== */
+let listFilter='all';
+$$('#listFilter button').forEach(b=>b.onclick=()=>{
+  $$('#listFilter button').forEach(x=>x.classList.remove('on'));b.classList.add('on');listFilter=b.dataset.f;renderList();
+});
+$('#searchBox').oninput=renderList;
+function filteredWords(){
+  const q=($('#searchBox').value||'').trim().toLowerCase();
+  return S.words.filter(w=>{
+    if(listFilter==='fav'){ if(!w.fav) return false; }
+    else if(listFilter!=='all'&&w.status!==listFilter) return false;
+    if(!q) return true;
+    return (w.word+w.read+w.mean+(w.ex||'')).toLowerCase().includes(q);
+  });
+}
+function renderList(){
+  const arr=filteredWords(), box=$('#wordList');
+  if(!arr.length){box.innerHTML='<div class="empty">해당하는 단어가 없습니다.</div>';return;}
+  const g={}; arr.forEach(w=>{(g[w.date]=g[w.date]||[]).push(w);});
+  box.innerHTML=Object.keys(g).sort().reverse().map(d=>
+    '<div class="datehead">'+d.replace(/-/g,'.')+' <span class="n">'+g[d].length+'개</span></div><div class="wlist">'+
+    g[d].map(w=>'<div class="witem" data-id="'+w.id+'">'+
+      '<div class="grow"><div class="jp">'+(w.fav?'<span style="color:#f59e0b">★</span> ':'')+esc(w.word)+'</div><div class="rd">'+esc(w.read)+' · '+esc(w.mean)+'</div></div>'+
+      '<span class="badge '+(w.status==='learn'?'learn':w.status==='known'?'known':'')+'">'+
+        (w.status==='learn'?'학습':w.status==='known'?'앎':'미분류')+'</span></div>').join('')+'</div>').join('');
+  $$('#wordList .witem').forEach(el=>el.onclick=()=>openEdit(el.dataset.id));
+}
+
+/* ===================== 단어 파싱/추가 ===================== */
+function splitFields(line){
+  if(line.includes('\t')) return line.split('\t');
+  if(line.includes('|')) return line.split('|');
+  if(line.includes(' / ')) return line.split(' / ');
+  if(line.includes(',')&&line.split(',').length>=3) return line.split(',');
+  return [line];
+}
+function parseWordField(s){
+  s=(s||'').trim();
+  let m=s.match(/^(.+?)\s*[\[\(（【]\s*([^\]\)）】]+)\s*[\]\)）】]$/);
+  if(m) return {word:m[1].trim(),read:m[2].trim()};
+  m=s.match(/^(.+?)\s+([぀-ゟ゠-ヿー]+)$/);
+  if(m) return {word:m[1].trim(),read:m[2].trim()};
+  return {word:s,read:''};
+}
+function parseText(text,date){
+  const out=[];
+  text.split(/\r?\n/).forEach(line=>{
+    line=line.trim(); if(!line||line.startsWith('#')) return;
+    const f=splitFields(line).map(x=>x.trim());
+    const wf=parseWordField(f[0]); if(!wf.word) return;
+    let pos='n',mean='',ex='',exKo='',level='N5';
+    if(f.length>=2){
+      const maybePos=f[1].toLowerCase();
+      if(['n','v','a','na','ad','e'].includes(maybePos)){ pos=maybePos; mean=f[2]||''; ex=f[3]||''; exKo=f[4]||''; level=f[5]||'N5'; }
+      else { mean=f[1]||''; ex=f[2]||''; exKo=f[3]||''; level=f[4]||'N5'; }
+    }
+    out.push(makeWord({word:wf.word,read:wf.read,pos:pos,mean:mean,ex:ex,exKo:exKo,level:level,date:date}));
+  });
+  return out;
+}
+function makeWord(o){
+  return {id:uid(),word:stripRuby(o.word||''),read:o.read||'',pos:o.pos||'n',mean:o.mean||'',
+    ex:o.ex||'',exKo:o.exKo||'',tip:o.tip||'',level:o.level||'N5',img:o.img||'',
+    status:o.status||'new',fav:!!o.fav,date:o.date||todayStr(),ts:Date.now(),seen:0};
+}
+/* 같은 날짜의 같은 단어는 다시 넣지 않는다 (같은 파일을 두 번 불러와도 안전) */
+function wkey(w){ return stripRuby(w.word||'').trim()+'|'+(w.date||''); }
+function addWords(arr,quiet){
+  if(!arr.length){ if(!quiet) toast('추가할 단어를 찾지 못했습니다.'); return 0; }
+  const have=new Set(S.words.map(wkey)), seen=new Set(), fresh=[];
+  arr.forEach(w=>{ const k=wkey(w); if(!stripRuby(w.word||'').trim()) return; if(have.has(k)||seen.has(k)) return; seen.add(k); fresh.push(w); });
+  const dup=arr.length-fresh.length;
+  if(!fresh.length){ if(!quiet) toast('이미 등록된 단어입니다 (중복 '+dup+'개 제외).'); return 0; }
+  S.words=S.words.concat(fresh); save();
+  if(!quiet) toast(fresh.length+'개 추가'+(dup?' · 중복 '+dup+'개 제외':'')+'했습니다.');
+  renderHome();
+  return fresh.length;
+}
+$$('#addMode button').forEach(b=>b.onclick=()=>{
+  $$('#addMode button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  $('#addPaste').style.display=b.dataset.m==='paste'?'':'none';
+  $('#addForm').style.display=b.dataset.m==='form'?'':'none';
+  $('#addFile').style.display=b.dataset.m==='file'?'':'none';
+});
+$('#btnPasteAdd').onclick=()=>{
+  const t=$('#pasteBox').value;
+  const arr=parseText(t,$('#pasteDate').value||todayStr());
+  if(arr.length){$('#pasteBox').value='';}
+  addWords(arr);
+};
+$('#btnFormAdd').onclick=()=>{
+  const w=$('#fWord').value.trim(); if(!w){toast('단어를 입력해 주세요.');return;}
+  const file=$('#fImg').files[0];
+  const build=(img)=>{
+    addWords([makeWord({word:w,read:$('#fRead').value.trim(),pos:$('#fPos').value,mean:$('#fMean').value.trim(),
+      ex:$('#fEx').value.trim(),exKo:$('#fExKo').value.trim(),tip:$('#fTip').value.trim(),
+      level:$('#fLevel').value,img:img,date:$('#fDate').value||todayStr()})]);
+    ['#fWord','#fRead','#fMean','#fEx','#fExKo','#fTip'].forEach(s=>$(s).value=''); $('#fImg').value='';
+  };
+  if(file) shrinkImage(file,build); else build('');
+};
+function shrinkImage(file,cb){
+  const r=new FileReader();
+  r.onload=e=>{
+    const im=new Image();
+    im.onload=()=>{
+      const max=640, sc=Math.min(1,max/Math.max(im.width,im.height));
+      const c=document.createElement('canvas'); c.width=im.width*sc; c.height=im.height*sc;
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+      cb(c.toDataURL('image/jpeg',0.72));
+    };
+    im.onerror=()=>cb('');
+    im.src=e.target.result;
+  };
+  r.readAsDataURL(file);
+}
+$('#btnFileAdd').onclick=()=>{
+  const f=$('#fileInput').files[0]; if(!f){toast('파일을 선택해 주세요.');return;}
+  const date=$('#fileDate').value||todayStr();
+  const r=new FileReader();
+  r.onload=e=>{
+    const txt=e.target.result;
+    if(/\.json$/i.test(f.name)){
+      try{
+        const j=JSON.parse(txt);
+        const list=Array.isArray(j)?j:(j.words||[]);
+        addWords(list.map(o=>makeWord(Object.assign({date:date},o))));
+      }catch(err){toast('JSON을 읽지 못했습니다.');}
+    } else addWords(parseText(txt,date));
+    $('#fileInput').value='';
+  };
+  r.readAsText(f,'utf-8');
+};
+$('#btnSample').onclick=()=>{ addWords(SAMPLE.map(o=>makeWord(Object.assign({date:todayStr()},o)))); go('home'); };
+
+/* ===================== 단어 편집 시트 ===================== */
+function openEdit(id){
+  const w=S.words.find(x=>x.id===id); if(!w) return;
+  $('#editInner').innerHTML=
+    '<h3>'+esc(w.word)+' <span class="muted" style="font-size:13px">'+esc(w.read)+'</span></h3>'+
+    '<div class="field"><label>단어</label><input id="eW" value="'+esc(w.word)+'"></div>'+
+    '<div class="field"><label>후리가나</label><input id="eR" value="'+esc(w.read)+'"></div>'+
+    '<div class="field"><label>뜻</label><input id="eM" value="'+esc(w.mean)+'"></div>'+
+    '<div class="field"><label>예문</label><input id="eE" value="'+esc(w.ex)+'"></div>'+
+    '<div class="field"><label>예문 해석</label><input id="eK" value="'+esc(w.exKo)+'"></div>'+
+    '<div class="field"><label>팁</label><input id="eT" value="'+esc(w.tip||'')+'"></div>'+
+    '<div class="field"><label>날짜</label><input type="date" id="eD" value="'+esc(w.date)+'"></div>'+
+    '<div class="field"><label>상태</label><div class="seg" id="eS">'+
+      ['new:미분류','learn:학습할게요','known:알고 있어요'].map(s=>{const[v,t]=s.split(':');
+        return '<button data-v="'+v+'"'+(w.status===v?' class="on"':'')+'>'+t+'</button>';}).join('')+'</div></div>'+
+    '<button class="btn block sm" id="eFav" style="margin-top:4px">'+(w.fav?'★ 즐겨찾기 해제':'☆ 즐겨찾기에 추가')+'</button>'+
+    '<div class="row" style="gap:10px;margin-top:14px">'+
+      '<button class="btn" id="eDel" style="color:#b91c1c">삭제</button>'+
+      '<button class="btn grow" id="eCancel">닫기</button>'+
+      '<button class="btn primary grow" id="eSave">저장</button></div>';
+  let st=w.status;
+  $$('#eS button').forEach(b=>b.onclick=()=>{$$('#eS button').forEach(x=>x.classList.remove('on'));b.classList.add('on');st=b.dataset.v;});
+  $('#eFav').onclick=()=>{ w.fav=!w.fav; save(); $('#eFav').textContent=w.fav?'★ 즐겨찾기 해제':'☆ 즐겨찾기에 추가'; renderList(); };
+  $('#eCancel').onclick=()=>$('#editSheet').classList.remove('on');
+  $('#eDel').onclick=()=>{ if(confirm('이 단어를 삭제할까요?')){ S.words=S.words.filter(x=>x.id!==id); save(); $('#editSheet').classList.remove('on'); renderList(); renderHome(); } };
+  $('#eSave').onclick=()=>{
+    Object.assign(w,{word:$('#eW').value.trim(),read:$('#eR').value.trim(),mean:$('#eM').value.trim(),
+      ex:$('#eE').value.trim(),exKo:$('#eK').value.trim(),tip:$('#eT').value.trim(),date:$('#eD').value||w.date,status:st});
+    save(); $('#editSheet').classList.remove('on'); renderList(); renderHome(); toast('저장했습니다.');
+  };
+  $('#editSheet').classList.add('on');
+}
+$('#editSheet').onclick=e=>{ if(e.target.id==='editSheet') $('#editSheet').classList.remove('on'); };
+
+/* ===================== 학습 시작 옵션 ===================== */
+const opt={mode:'card',status:'all',scope:'all',date:'',order:'seq',quiz:'jp2ko'};
+function bindSeg(sel,key,after){
+  $$(sel+' button').forEach(b=>b.onclick=()=>{
+    $$(sel+' button').forEach(x=>x.classList.remove('on'));b.classList.add('on');opt[key]=b.dataset.v;after&&after();
+  });
+}
+bindSeg('#optMode','mode',()=>{ $('#quizTypeWrap').style.display=opt.mode==='quiz'?'':'none'; });
+bindSeg('#optStatus','status');
+bindSeg('#optScope','scope',()=>{ $('#scopeDateWrap').style.display=opt.scope==='date'?'':'none'; });
+bindSeg('#optOrder','order');
+bindSeg('#optQuiz','quiz');
+function openStart(date){
+  const dates=[...new Set(S.words.map(w=>w.date))].sort().reverse();
+  $('#scopeDate').innerHTML=dates.map(d=>'<option value="'+d+'">'+d.replace(/-/g,'.')+' ('+S.words.filter(w=>w.date===d).length+')</option>').join('');
+  if(date){
+    opt.scope='date'; opt.date=date; $('#scopeDate').value=date;
+    $$('#optScope button').forEach(x=>x.classList.toggle('on',x.dataset.v==='date'));
+    $('#scopeDateWrap').style.display='';
+  }
+  $('#startSheet').classList.add('on');
+}
+$('#btnStartCancel').onclick=()=>$('#startSheet').classList.remove('on');
+$('#startSheet').onclick=e=>{ if(e.target.id==='startSheet') $('#startSheet').classList.remove('on'); };
+$('#btnStudyAll').onclick=()=>openStart();
+$('#btnStudyFiltered').onclick=()=>{ const arr=filteredWords(); if(!arr.length){toast('학습할 단어가 없습니다.');return;} startCard(arr.slice()); };
+$('#btnStartGo').onclick=()=>{
+  opt.date=$('#scopeDate').value||opt.date;
+  let pool=S.words.slice();
+  if(opt.scope==='date') pool=pool.filter(w=>w.date===opt.date);
+  if(opt.status!=='all') pool=pool.filter(w=>w.status===opt.status);
+  if($('#optFav').checked) pool=pool.filter(w=>w.fav);
+  if(!pool.length){ toast('조건에 맞는 단어가 없습니다.'); return; }
+  if(opt.order==='rand') pool.sort(()=>Math.random()-0.5);
+  $('#startSheet').classList.remove('on');
+  if(opt.mode==='quiz') startQuiz(pool); else startCard(pool);
+};
+
+/* ===================== 카드 학습 ===================== */
+let ses=null, advTimer=null;
+function startCard(pool){
+  ses={list:pool,i:0,done:0,skip:0,hist:[],revealed:false};
+  go('study'); renderCard();
+}
+function renderCard(){
+  clearAdv();
+  if(!ses||ses.i>=ses.list.length){ finishCard(); return; }
+  const w=ses.list[ses.i];
+  $('#doneCnt').textContent=ses.i+1; $('#totalCnt').textContent=ses.list.length;
+  $('#skipCnt').textContent=ses.skip;
+  $('#progBar').style.width=(ses.i/ses.list.length*100)+'%';
+  const hide=S.settings.hideMeaning&&!ses.revealed;
+  const kanji=(w.word.match(/[一-鿿々]/g)||[]).join('');
+  const art=(kanji||w.word.replace(/[～~]/g,'')).slice(0,2);
+  const wLen=w.word.length;
+  const wSize=wLen>10?26:wLen>7?31:wLen>4?36:42;
+  const pic = w.img
+    ? '<img src="'+w.img+'" alt="">'
+    : '<div class="kanjiart">'+esc(art)+'</div>';
+  $('#flash').innerHTML=
+   '<div class="pic">'+pic+'<div class="mark'+(w.fav?' on':'')+'" id="bookmark" title="즐겨찾기">'+(w.fav?'★':'☆')+'</div></div>'+
+   '<div class="info">'+
+     '<div class="wordline"><div class="grow"><div class="word" style="font-size:'+wSize+'px">'+esc(w.word)+'</div>'+
+       '<div class="reading">['+esc(w.read||'')+']</div></div>'+
+       '<button class="speak" id="spWord" title="단어 발음">'+WAVE+'</button></div>'+
+     '<div class="meaning" id="meanBox">'+(w.pos?'<span class="pos">'+esc(w.pos)+'</span>':'')+
+        '<span>'+(hide?'<span class="muted">탭하면 뜻 보기</span>':esc(w.mean))+'</span></div>'+
+     (w.ex? '<div class="sep"></div><div class="exline"><div class="ex">'+ruby(w.ex,w.word)+'</div>'+
+            '<button class="speak" id="spEx" title="예문 발음">'+WAVE+'</button></div>'+
+            (w.exKo?'<div class="extr">'+esc(w.exKo)+'</div>':'') : '')+
+   '</div>'+
+   '<div class="foot"><span class="lvl">'+esc(w.level||'')+'</span>'+
+     (w.tip?'<button class="tipbtn" id="tipBtn">팁 ›</button>':'')+'</div>';
+  $('#spWord').onclick=()=>speak(w.word||w.read);
+  const ex=$('#spEx'); if(ex) ex.onclick=()=>speak(w.ex);
+  const tb=$('#tipBtn'); if(tb) tb.onclick=()=>alert(w.tip);
+  $('#meanBox').onclick=()=>{ if(S.settings.hideMeaning&&!ses.revealed){ ses.revealed=true; renderCard(); } };
+  $('#bookmark').onclick=()=>{ w.fav=!w.fav; save(); toast(w.fav?'★ 즐겨찾기에 추가했습니다.':'즐겨찾기에서 뺐습니다.');
+    const m=$('#bookmark'); m.textContent=w.fav?'★':'☆'; m.classList.toggle('on',w.fav); };
+  if(S.settings.autoSpeak) speak(w.word||w.read, ()=>{ if(S.settings.autoSpeakEx&&w.ex) setTimeout(()=>speak(w.ex),250); });
+  startAdv();
+}
+const WAVE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">'+
+  '<path d="M3 12h1M7 8v8M11 4v16M15 7v10M19 10v4M21 12h0"/></svg>';
+function answer(status){
+  if(!ses) return;
+  const w=ses.list[ses.i];
+  ses.hist.push({id:w.id,prev:w.status,i:ses.i,done:ses.done,skip:ses.skip});
+  w.status=status; w.seen=(w.seen||0)+1; w.last=Date.now();
+  save(); ses.done++; ses.i++; ses.revealed=false; renderCard();
+}
+$('#btnKnown').onclick=()=>answer('known');
+$('#btnLearn').onclick=()=>answer('learn');
+$('#btnUndo').onclick=()=>{
+  if(!ses||!ses.hist.length){toast('되돌릴 항목이 없습니다.');return;}
+  const h=ses.hist.pop(); const w=S.words.find(x=>x.id===h.id);
+  if(w) w.status=h.prev;
+  ses.i=h.i; ses.done=h.done; ses.skip=h.skip; ses.revealed=false; save(); renderCard();
+};
+$('#btnStudyMenu').onclick=()=>{
+  if(!ses) return;
+  const w=ses.list[ses.i];
+  const a=prompt('1: 이 카드 건너뛰기\n2: 이 단어 삭제\n3: 학습 종료\n번호를 입력하세요','1');
+  if(a==='1'){ ses.hist.push({id:w.id,prev:w.status,i:ses.i,done:ses.done,skip:ses.skip}); ses.skip++; ses.i++; renderCard(); }
+  else if(a==='2'){ S.words=S.words.filter(x=>x.id!==w.id); ses.list.splice(ses.i,1); ses.skip++; save(); renderCard(); }
+  else if(a==='3'){ finishCard(); }
+};
+$('#btnStudyBack').onclick=()=>{ clearAdv(); if(window.speechSynthesis) speechSynthesis.cancel(); ses=null; go('home'); };
+function finishCard(){
+  clearAdv();
+  const total=ses?ses.list.length:0, done=ses?ses.done:0, skip=ses?ses.skip:0;
+  $('#flash').innerHTML='<div class="info center" style="padding:50px 20px">'+
+    '<div style="font-size:44px">🎉</div><div style="font-size:20px;font-weight:800;margin:10px 0 6px">학습 완료</div>'+
+    '<div class="muted">'+done+'개 학습 · 건너뜀 '+skip+'개 (전체 '+total+')</div>'+
+    '<button class="btn primary" style="margin-top:18px" onclick="go(\'home\')">홈으로</button></div>';
+  $('#progBar').style.width='100%';
+  ses=null;
+}
+/* 자동 넘김 링 */
+function clearAdv(){ if(advTimer){clearInterval(advTimer);advTimer=null;} $('#ring').innerHTML=''; }
+function startAdv(){
+  if(!S.settings.autoAdvance) return;
+  let left=S.settings.advSec||7; const total=left;
+  const draw=()=>{
+    const r=11,c=2*Math.PI*r,off=c*(1-left/total);
+    $('#ring').innerHTML='<svg width="26" height="26"><circle cx="13" cy="13" r="'+r+'" stroke="currentColor" stroke-opacity=".25" stroke-width="2" fill="none"/>'+
+      '<circle cx="13" cy="13" r="'+r+'" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+off+'"/></svg><span>'+left+'</span>';
+  };
+  draw();
+  advTimer=setInterval(()=>{ left--; if(left<=0){ clearAdv(); answer('learn'); } else draw(); },1000);
+}
+
+/* ===================== 퀴즈 ===================== */
+function speakSeq(list,cb){
+  const arr=(list||[]).filter(Boolean);
+  let k=0;
+  const next=()=>{ if(k>=arr.length){ cb&&cb(); return; } speak(arr[k++],()=>setTimeout(next,250)); };
+  next();
+}
+let quiz=null;
+function startQuiz(pool){
+  quiz={list:pool.slice(),i:0,ok:0,type:opt.quiz,locked:false};
+  go('quiz'); renderQuiz();
+}
+function renderQuiz(){
+  if(!quiz) return;
+  if(quiz.i>=quiz.list.length){
+    $('#quizBody').innerHTML='<div class="empty"><div class="big">🏁</div><div style="font-size:20px;font-weight:800;color:var(--ink)">퀴즈 완료</div>'+
+      '<div style="margin-top:6px">'+quiz.list.length+'문제 중 '+quiz.ok+'개 정답</div>'+
+      '<button class="btn primary" style="margin-top:18px" onclick="go(\'home\')">홈으로</button></div>';
+    $('#qProg').style.width='100%'; return;
+  }
+  const w=quiz.list[quiz.i];
+  const pool=S.words.filter(x=>x.id!==w.id);
+  const wrong=pool.sort(()=>Math.random()-0.5).slice(0,3);
+  const opts=[w].concat(wrong).sort(()=>Math.random()-0.5);
+  $('#qCorrect').textContent=quiz.ok; $('#qDone').textContent=quiz.list.length;
+  $('#qProg').style.width=(quiz.i/quiz.list.length*100)+'%';
+  let head='';
+  if(quiz.type==='jp2ko') head='<div class="qprompt">'+esc(w.word)+'</div><div class="qsub">['+esc(w.read)+']</div>';
+  else if(quiz.type==='ko2jp') head='<div class="qprompt" style="font-family:inherit;font-size:30px">'+esc(w.mean)+'</div>';
+  else head='<div class="qprompt">🔊</div><div class="qsub">소리를 듣고 알맞은 단어를 고르세요</div>';
+  /* 듣고 맞추기는 후리가나를 숨긴다 (읽는 법이 곧 정답이 되므로) */
+  const label=o=>quiz.type==='jp2ko'?esc(o.mean)
+    :(quiz.type==='listen'?esc(o.word)
+    :(esc(o.word)+' <span class="muted" style="font-size:12px">'+esc(o.read)+'</span>'));
+  $('#quizBody').innerHTML=head+'<div style="height:20px"></div>'+
+    opts.map(o=>'<button class="opt" data-id="'+o.id+'">'+label(o)+'</button>').join('')+
+    '<div id="qExplain"></div>'+
+    '<div style="height:10px"></div><button class="btn block sm" id="qSkip">건너뛰기</button>';
+  quiz.locked=false; quiz.qid=uid();
+  if(quiz.type==='listen') speak(w.word||w.read);
+  $$('#quizBody .opt').forEach(b=>b.onclick=()=>{
+    if(quiz.locked) return; quiz.locked=true;
+    const right=b.dataset.id===w.id;
+    if(right){ quiz.ok++; b.classList.add('correct'); }
+    else { b.classList.add('wrong'); const c=$('#quizBody .opt[data-id="'+w.id+'"]'); if(c) c.classList.add('correct'); w.status='learn'; save(); }
+    showQuizExplain(w,right);
+  });
+  $('#qSkip').onclick=()=>{ if(window.speechSynthesis) speechSynthesis.cancel(); quiz.qid=uid(); quiz.i++; renderQuiz(); };
+}
+/* 정답 확인 후: 단어 + 예문을 화면에 보여주고 소리로도 읽어준다 (지침 2) */
+function showQuizExplain(w,right){
+  const box=$('#qExplain'); if(!box) return;
+  const exBlock = w.ex
+    ? '<div class="sep"></div>'+
+      '<div class="exline"><div class="ex">'+ruby(w.ex,w.word)+'</div>'+
+      '<button class="speak" id="qSpeakEx" title="예문 다시 듣기">🔊</button></div>'+
+      (w.exKo?'<div class="extr">'+esc(w.exKo)+'</div>':'')
+    : '<div class="sep"></div><div class="muted">등록된 예문이 없습니다.</div>';
+  box.innerHTML =
+    '<div class="card" style="margin-top:16px">'+
+      '<div class="row" style="justify-content:space-between;align-items:flex-start">'+
+        '<div class="grow">'+
+          '<div class="word" style="font-size:32px">'+esc(w.word)+'</div>'+
+          '<div class="reading">'+esc(w.read)+'</div>'+
+          '<div class="meaning" style="font-size:16px"><span class="pos">'+esc(w.pos||'n')+'</span>'+esc(w.mean)+'</div>'+
+        '</div>'+
+        '<span class="pill '+(right?'green':'red')+'">'+(right?'✓ 정답':'✕ 오답')+'</span>'+
+      '</div>'+
+      exBlock+
+      (w.tip?'<div class="hint" style="margin-top:12px">💡 '+esc(w.tip)+'</div>':'')+
+    '</div>'+
+    '<button class="btn primary block" id="qNext" style="margin-top:12px">다음 문제 →</button>';
+  const qid=quiz.qid;
+  speakSeq([w.word||w.read, w.ex]);
+  const exBtn=$('#qSpeakEx'); if(exBtn) exBtn.onclick=()=>speak(w.ex);
+  $('#qNext').onclick=()=>{
+    if(!quiz||quiz.qid!==qid) return;
+    if(window.speechSynthesis) speechSynthesis.cancel();
+    quiz.i++; renderQuiz();
+  };
+  $('#qNext').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+$('#btnQuizBack').onclick=()=>{ if(window.speechSynthesis) speechSynthesis.cancel(); quiz=null; go('home'); };
+$('#btnQuizSpeak').onclick=()=>{ if(quiz&&quiz.list[quiz.i]) speak(quiz.list[quiz.i].word); };
+
+/* ===================== 설정 ===================== */
+function renderSettings(){
+  loadVoices();
+  $('#rateSel').value=S.settings.rate; $('#rateVal').textContent=S.settings.rate;
+  $('#autoSpeak').checked=S.settings.autoSpeak; $('#autoSpeakEx').checked=S.settings.autoSpeakEx;
+  $('#autoAdvance').checked=S.settings.autoAdvance; $('#advSec').value=S.settings.advSec; $('#advVal').textContent=S.settings.advSec;
+  $('#hideMeaning').checked=S.settings.hideMeaning;
+}
+$('#voiceSel').onchange=e=>{S.settings.voice=e.target.value;save();};
+$('#rateSel').oninput=e=>{S.settings.rate=+e.target.value;$('#rateVal').textContent=e.target.value;save();};
+$('#advSec').oninput=e=>{S.settings.advSec=+e.target.value;$('#advVal').textContent=e.target.value;save();};
+['autoSpeak','autoSpeakEx','autoAdvance','hideMeaning'].forEach(k=>{
+  $('#'+k).onchange=e=>{S.settings[k]=e.target.checked;save();};
+});
+$('#btnTestVoice').onclick=()=>speak('大人になったら、車を運転したいです。');
+$('#btnExport').onclick=()=>{
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='일본어단어장_백업_'+todayStr()+'.json'; a.click();
+};
+$('#btnImport').onclick=()=>$('#importInput').click();
+$('#importInput').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const j=JSON.parse(ev.target.result);
+      const list=Array.isArray(j)?j:(j.words||[]);
+      const ids=new Set(S.words.map(w=>w.id));
+      const keys=new Set(S.words.map(wkey));
+      const add=[];
+      list.forEach(o=>{
+        if(ids.has(o.id)) return;
+        const w=Object.assign(makeWord(o),{id:o.id||uid()});
+        const k=wkey(w); if(keys.has(k)) return;   /* 같은 날짜의 같은 단어는 건너뜀 */
+        keys.add(k); add.push(w);
+      });
+      const dup=list.length-add.length;
+      S.words=S.words.concat(add);
+      if(j.settings) S.settings=Object.assign({},S.settings,j.settings);
+      if(Array.isArray(j.installed)) j.installed.forEach(id=>{ if(S.installed.indexOf(id)<0) S.installed.push(id); });
+      save(); toast(add.length+'개 단어를 불러왔습니다'+(dup?' · 중복 '+dup+'개 제외':'')+'.'); renderHome();
+    }catch(err){toast('파일을 읽지 못했습니다.');}
+  };
+  r.readAsText(f,'utf-8');
+};
+$('#btnReset').onclick=()=>{ if(confirm('모든 단어와 설정을 삭제할까요? 되돌릴 수 없습니다.')){ S={words:[],settings:Object.assign({},DEF_SET),installed:PACKS.map(p=>p.id)}; save(); renderHome(); renderSettings(); toast('전체 삭제했습니다.'); } };
+$('#btnPacks').onclick=()=>{ const r=installPacks(false); renderHome(); toast(r.n?('내장 단어 '+r.n+'개를 등록했습니다.'):'내장 단어가 이미 모두 등록되어 있습니다.'); };
+
+/* ===================== 내장 단어팩 (지침 10) ===================== */
+/* 수업 자료에서 만든 단어를 앱 파일에 직접 담아 둔다.
+   처음 실행할 때 자동 등록되고, 이미 등록된 팩은 다시 넣지 않는다. */
+const PACKS=[
+ {id:'2026-07-22', title:'THE ONE 어학원 14회차 (26.07.22)', date:'2026-07-22', words:[
+ {"word": "同時", "read": "どうじ", "pos": "n", "mean": "동시", "ex": "二人[ふたり]は同時[どうじ]に同[おな]じ答[こた]えを言[い]いました。", "exKo": "두 사람은 동시에 같은 답을 말했습니다.", "tip": "同時に = 동시에", "level": "N3", "date": "2026-07-22"},
+ {"word": "日", "read": "ひ", "pos": "n", "mean": "해, 햇빛", "ex": "日[ひ]が当[あ]たる場所[ばしょ]に洗濯物[せんたくもの]を干[ほ]しました。", "exKo": "볕이 드는 곳에 빨래를 널었습니다.", "tip": "해·햇빛·날의 뜻을 모두 가짐", "level": "N5", "date": "2026-07-22"},
+ {"word": "太陽", "read": "たいよう", "pos": "n", "mean": "태양", "ex": "太陽[たいよう]の光[ひかり]がまぶしいです。", "exKo": "태양 빛이 눈부십니다.", "tip": "日보다 문어적·천체 자체를 가리킴", "level": "N4", "date": "2026-07-22"},
+ {"word": "カンカン照り", "read": "カンカンでり", "pos": "n", "mean": "햇볕이 쨍쨍 내리쬠", "ex": "今日[きょう]はカンカン照[で]りで、外[そと]に出[で]たくないです。", "exKo": "오늘은 볕이 쨍쨍 내리쬐어서 밖에 나가고 싶지 않습니다.", "tip": "カンカン은 뙤약볕이 내리쬐는 모양", "level": "N1", "date": "2026-07-22"},
+ {"word": "ころころ変わる", "read": "ころころかわる", "pos": "v", "mean": "변덕스럽게 자주 바뀌다", "ex": "彼[かれ]の意見[いけん]はころころ変[か]わります。", "exKo": "그의 의견은 이랬다저랬다 자주 바뀝니다.", "tip": "気まぐれだ・変わりやすい와 유의", "level": "N2", "date": "2026-07-22"},
+ {"word": "気まぐれだ", "read": "きまぐれだ", "pos": "na", "mean": "변덕스럽다", "ex": "妹[いもうと]は気[き]まぐれで、予定[よてい]をよく変[か]えます。", "exKo": "여동생은 변덕스러워서 예정을 자주 바꿉니다.", "tip": "사람의 성격에 주로 사용", "level": "N2", "date": "2026-07-22"},
+ {"word": "変わりやすい", "read": "かわりやすい", "pos": "a", "mean": "잘 변하다, 변덕스럽다", "ex": "山[やま]の天気[てんき]は変[か]わりやすいです。", "exKo": "산 날씨는 변덕스럽습니다.", "tip": "날씨·기분 등 사물에도 사용", "level": "N3", "date": "2026-07-22"},
+ {"word": "頼み事", "read": "たのみごと", "pos": "n", "mean": "부탁할 것, 부탁", "ex": "ちょっと頼[たの]み事[ごと]があるんですが、いいですか。", "exKo": "좀 부탁할 게 있는데, 괜찮을까요?", "tip": "頼む(부탁하다)의 명사형 표현", "level": "N2", "date": "2026-07-22"},
+ {"word": "歌詞", "read": "かし", "pos": "n", "mean": "가사", "ex": "この歌[うた]の歌詞[かし]を覚[おぼ]えて、日本語[にほんご]を勉強[べんきょう]します。", "exKo": "이 노래의 가사를 외워서 일본어를 공부합니다.", "level": "N2", "date": "2026-07-22"},
+ {"word": "母国語", "read": "ぼこくご", "pos": "n", "mean": "모국어", "ex": "私[わたし]の母国語[ぼこくご]は韓国語[かんこくご]です。", "exKo": "제 모국어는 한국어입니다.", "level": "N2", "date": "2026-07-22"},
+ {"word": "文法", "read": "ぶんぽう", "pos": "n", "mean": "문법", "ex": "文法[ぶんぽう]の基礎[きそ]をもう一度[いちど]復習[ふくしゅう]します。", "exKo": "문법 기초를 한 번 더 복습합니다.", "level": "N3", "date": "2026-07-22"},
+ {"word": "～以外は", "read": "いがいは", "pos": "e", "mean": "~이외는, ~말고는", "ex": "日曜日[にちようび]以外[いがい]は毎日[まいにち]働[はたら]いています。", "exKo": "일요일 이외에는 매일 일하고 있습니다.", "tip": "명사+以外は 형태로 사용", "level": "N3", "date": "2026-07-22"},
+ {"word": "解説", "read": "かいせつ", "pos": "n", "mean": "해설", "ex": "先生[せんせい]の解説[かいせつ]を聞[き]いて、やっと理解[りかい]できました。", "exKo": "선생님의 해설을 듣고 겨우 이해했습니다.", "tip": "解説=풀어서 설명해 줌", "level": "N2", "date": "2026-07-22"},
+ {"word": "解釈", "read": "かいしゃく", "pos": "n", "mean": "해석", "ex": "同[おな]じ文章[ぶんしょう]でも解釈[かいしゃく]は人[ひと]によって違[ちが]います。", "exKo": "같은 문장이라도 해석은 사람마다 다릅니다.", "tip": "解釈=의미를 받아들이는 방식", "level": "N1", "date": "2026-07-22"},
+ {"word": "性格", "read": "せいかく", "pos": "n", "mean": "성격", "ex": "彼女[かのじょ]は明[あか]るい性格[せいかく]です。", "exKo": "그녀는 밝은 성격입니다.", "level": "N4", "date": "2026-07-22"},
+ {"word": "男らしい", "read": "おとこらしい", "pos": "a", "mean": "남자답다", "ex": "はっきり謝[あやま]るところが男[おとこ]らしいです。", "exKo": "분명하게 사과하는 점이 남자답습니다.", "tip": "명사+らしい = ~답다", "level": "N3", "date": "2026-07-22"},
+ {"word": "後輩", "read": "こうはい", "pos": "n", "mean": "후배", "ex": "会社[かいしゃ]の後輩[こうはい]に仕事[しごと]を教[おし]えました。", "exKo": "회사 후배에게 일을 가르쳤습니다.", "tip": "반대말: 先輩(せんぱい)", "level": "N3", "date": "2026-07-22"},
+ {"word": "深く掘る", "read": "ふかくほる", "pos": "v", "mean": "깊이 파다", "ex": "木[き]を植[う]えるために、穴[あな]を深[ふか]く掘[ほ]りました。", "exKo": "나무를 심기 위해 구멍을 깊이 팠습니다.", "tip": "물리적으로 파는 경우", "level": "N2", "date": "2026-07-22"},
+ {"word": "深掘りする", "read": "ふかぼりする", "pos": "v", "mean": "깊이 파고들다", "ex": "この問題[もんだい]はもっと深掘[ふかぼ]りする必要[ひつよう]があります。", "exKo": "이 문제는 더 깊이 파고들 필요가 있습니다.", "tip": "비유적으로 '깊이 분석하다'", "level": "N1", "date": "2026-07-22"},
+ {"word": "詳しい", "read": "くわしい", "pos": "a", "mean": "상세하다, 능통하다", "ex": "彼[かれ]は日本[にほん]の歴史[れきし]に詳[くわ]しいです。", "exKo": "그는 일본 역사에 능통합니다.", "tip": "~に詳しい = ~에 밝다", "level": "N4", "date": "2026-07-22"},
+ {"word": "目標", "read": "もくひょう", "pos": "n", "mean": "목표", "ex": "今年[ことし]の目標[もくひょう]はN2に合格[ごうかく]することです。", "exKo": "올해 목표는 N2에 합격하는 것입니다.", "level": "N3", "date": "2026-07-22"},
+ {"word": "お金を稼ぐ", "read": "おかねをかせぐ", "pos": "v", "mean": "돈을 벌다", "ex": "アルバイトをして、自分[じぶん]でお金[かね]を稼[かせ]いでいます。", "exKo": "아르바이트를 해서 스스로 돈을 벌고 있습니다.", "tip": "稼ぐ는 노력해서 번다는 뉘앙스", "level": "N2", "date": "2026-07-22"},
+ {"word": "毎回", "read": "まいかい", "pos": "n", "mean": "매번", "ex": "毎回[まいかい]同[おな]じミスをしてしまいます。", "exKo": "매번 같은 실수를 하고 맙니다.", "level": "N3", "date": "2026-07-22"},
+ {"word": "今回", "read": "こんかい", "pos": "n", "mean": "이번", "ex": "今回[こんかい]のテストはよくできました。", "exKo": "이번 시험은 잘 봤습니다.", "tip": "次回(다음번)·前回(지난번)와 함께", "level": "N3", "date": "2026-07-22"},
+ {"word": "水準", "read": "すいじゅん", "pos": "n", "mean": "수준", "ex": "会話[かいわ]の水準[すいじゅん]が少[すこ]しずつ上[あ]がってきました。", "exKo": "회화 수준이 조금씩 올라왔습니다.", "tip": "レベル와 바꿔 쓸 수 있음", "level": "N2", "date": "2026-07-22"},
+ {"word": "段階", "read": "だんかい", "pos": "n", "mean": "단계", "ex": "次[つぎ]の段階[だんかい]に進[すす]む前[まえ]に、基礎[きそ]を固[かた]めます。", "exKo": "다음 단계로 나아가기 전에 기초를 다집니다.", "level": "N2", "date": "2026-07-22"},
+ {"word": "越える", "read": "こえる", "pos": "v", "mean": "넘다, 넘어가다, 지나다", "ex": "この山[やま]を越[こ]えると、海[うみ]が見[み]えます。", "exKo": "이 산을 넘으면 바다가 보입니다.", "tip": "超える(수치를 초과하다)와 구별", "level": "N3", "date": "2026-07-22"},
+ {"word": "速度が付く", "read": "そくどがつく", "pos": "e", "mean": "속도가 붙다", "ex": "慣[な]れてくると、勉強[べんきょう]に速度[そくど]が付[つ]きます。", "exKo": "익숙해지면 공부에 속도가 붙습니다.", "level": "N2", "date": "2026-07-22"},
+ {"word": "慣れる", "read": "なれる", "pos": "v", "mean": "익숙해지다", "ex": "新[あたら]しい会社[かいしゃ]にもだいぶ慣[な]れました。", "exKo": "새 회사에도 꽤 익숙해졌습니다.", "tip": "조사는 に를 사용 (~に慣れる)", "level": "N4", "date": "2026-07-22"},
+ {"word": "文章", "read": "ぶんしょう", "pos": "n", "mean": "문장, 글", "ex": "短[みじか]い文章[ぶんしょう]から書[か]く練習[れんしゅう]をしましょう。", "exKo": "짧은 글부터 쓰는 연습을 합시다.", "tip": "文(문장 한 개)보다 큰 단위의 글", "level": "N3", "date": "2026-07-22"},
+ {"word": "勿体ない", "read": "もったいない", "pos": "a", "mean": "아깝다", "ex": "まだ使[つか]えるのに捨[す]てるのは勿体[もったい]ないです。", "exKo": "아직 쓸 수 있는데 버리는 건 아깝습니다.", "tip": "보통 히라가나 もったいない로 표기", "level": "N3", "date": "2026-07-22"},
+ {"word": "熟語", "read": "じゅくご", "pos": "n", "mean": "숙어", "ex": "熟語[じゅくご]を覚[おぼ]えると、表現[ひょうげん]が豊[ゆた]かになります。", "exKo": "숙어를 외우면 표현이 풍부해집니다.", "level": "N2", "date": "2026-07-22"},
+ {"word": "作文", "read": "さくぶん", "pos": "n", "mean": "작문", "ex": "毎日[まいにち]三行[さんぎょう]の作文[さくぶん]を書[か]いています。", "exKo": "매일 세 줄짜리 작문을 쓰고 있습니다.", "level": "N4", "date": "2026-07-22"},
+ {"word": "間違いがあったら", "read": "まちがいがあったら", "pos": "e", "mean": "틀린 점이 있으면", "ex": "間違[まちが]いがあったら、直[なお]してください。", "exKo": "틀린 점이 있으면 고쳐 주세요.", "tip": "間違い(명사) + があったら(있으면)", "level": "N3", "date": "2026-07-22"},
+ {"word": "直す", "read": "なおす", "pos": "v", "mean": "고치다", "ex": "先生[せんせい]が作文[さくぶん]を直[なお]してくれました。", "exKo": "선생님이 작문을 고쳐 주었습니다.", "tip": "治す(병을 고치다)와 구별", "level": "N4", "date": "2026-07-22"},
+ {"word": "修正", "read": "しゅうせい", "pos": "n", "mean": "수정", "ex": "資料[しりょう]を少[すこ]し修正[しゅうせい]してから送[おく]ります。", "exKo": "자료를 조금 수정한 뒤에 보내겠습니다.", "tip": "直す보다 격식 있는 표현", "level": "N2", "date": "2026-07-22"},
+ {"word": "話した通りに", "read": "はなしたとおりに", "pos": "e", "mean": "말한 대로", "ex": "さっき話[はな]した通[とお]りに進[すす]めてください。", "exKo": "아까 말한 대로 진행해 주세요.", "tip": "동사 た형 + 通りに = ~한 대로", "level": "N3", "date": "2026-07-22"},
+ {"word": "全員で", "read": "ぜんいんで", "pos": "e", "mean": "전원이서, 다 같이", "ex": "全員[ぜんいん]で写真[しゃしん]を撮[と]りましょう。", "exKo": "다 같이 사진을 찍읍시다.", "tip": "조사 で는 '~해서, ~한 상태로'", "level": "N3", "date": "2026-07-22"},
+ {"word": "前に進めるように", "read": "まえにすすめるように", "pos": "e", "mean": "앞으로 나아갈 수 있도록", "ex": "前[まえ]に進[すす]めるように、毎日[まいにち]少[すこ]しずつ練習[れんしゅう]します。", "exKo": "앞으로 나아갈 수 있도록 매일 조금씩 연습합니다.", "tip": "가능형 + ように = ~할 수 있도록", "level": "N2", "date": "2026-07-22"},
+ {"word": "前進", "read": "ぜんしん", "pos": "n", "mean": "전진", "ex": "小[ちい]さくても、これは大[おお]きな前進[ぜんしん]です。", "exKo": "작더라도 이것은 큰 전진입니다.", "tip": "반대말: 後退(こうたい)", "level": "N2", "date": "2026-07-22"},
+ {"word": "動機", "read": "どうき", "pos": "n", "mean": "동기", "ex": "日本語[にほんご]を始[はじ]めた動機[どうき]は何[なん]ですか。", "exKo": "일본어를 시작한 동기는 무엇입니까?", "tip": "同期(동기·같은 기수)와 발음이 같음", "level": "N2", "date": "2026-07-22"},
+ {"word": "真理", "read": "しんり", "pos": "n", "mean": "진리", "ex": "それは誰[だれ]も否定[ひてい]できない真理[しんり]です。", "exKo": "그것은 누구도 부정할 수 없는 진리입니다.", "tip": "心理(심리)와 발음이 같음", "level": "N1", "date": "2026-07-22"},
+ {"word": "持続", "read": "じぞく", "pos": "n", "mean": "지속", "ex": "この薬[くすり]の効果[こうか]は八時間[はちじかん]持続[じぞく]します。", "exKo": "이 약의 효과는 8시간 지속됩니다.", "tip": "어떤 상태·효과가 계속되는 것", "level": "N1", "date": "2026-07-22"},
+ {"word": "継続", "read": "けいぞく", "pos": "n", "mean": "계속, 지속", "ex": "毎日[まいにち]の勉強[べんきょう]を継続[けいぞく]しています。", "exKo": "매일 하는 공부를 계속하고 있습니다.", "tip": "도중에 그만두지 않고 이어 가는 것", "level": "N2", "date": "2026-07-22"},
+ {"word": "継続は力なり", "read": "けいぞくはちからなり", "pos": "e", "mean": "지속은 힘이다 (속담)", "ex": "継続[けいぞく]は力[ちから]なり。少[すこ]しずつでも毎日[まいにち]続[つづ]けましょう。", "exKo": "계속은 힘이다. 조금씩이라도 매일 이어 갑시다.", "tip": "일본 속담. なり는 문어체 '~이다'", "level": "N1", "date": "2026-07-22"}
+ ]}
+];
+function installPacks(auto){
+  let total=0, names=[];
+  PACKS.forEach(p=>{
+    if(auto && S.installed.indexOf(p.id)>=0) return;
+    const n=addWords(p.words.map(o=>makeWord(Object.assign({},o,{date:o.date||p.date}))), true);
+    if(S.installed.indexOf(p.id)<0) S.installed.push(p.id);
+    if(n){ total+=n; names.push(p.title+' '+n+'개'); }
+  });
+  save();
+  return {n:total, names:names};
+}
+
+/* ===================== 샘플 데이터 ===================== */
+const SAMPLE=[
+ {word:'大人',read:'おとな',pos:'n',mean:'어른',ex:'大人[おとな]になったら、車[くるま]を運転[うんてん]したいです。',exKo:'어른이 되면 차를 운전하고 싶어요.',tip:'子供(こども)의 반대말. 読み가 특별하니 통째로 외우세요.',level:'N5'},
+ {word:'学生',read:'がくせい',pos:'n',mean:'학생',ex:'私[わたし]は日本語[にほんご]の学生[がくせい]です。',exKo:'저는 일본어 학생입니다.',level:'N5'},
+ {word:'会社',read:'かいしゃ',pos:'n',mean:'회사',ex:'父[ちち]は会社[かいしゃ]で働[はたら]いています。',exKo:'아버지는 회사에서 일하고 있습니다.',level:'N5'},
+ {word:'時間',read:'じかん',pos:'n',mean:'시간',ex:'時間[じかん]がありませんから、急[いそ]ぎましょう。',exKo:'시간이 없으니까 서두릅시다.',level:'N5'},
+ {word:'電車',read:'でんしゃ',pos:'n',mean:'전철',ex:'毎朝[まいあさ]電車[でんしゃ]で学校[がっこう]へ行[い]きます。',exKo:'매일 아침 전철로 학교에 갑니다.',level:'N5'},
+ {word:'食べる',read:'たべる',pos:'v',mean:'먹다',ex:'朝[あさ]ごはんを食[た]べましたか。',exKo:'아침밥을 먹었습니까?',level:'N5'},
+ {word:'飲む',read:'のむ',pos:'v',mean:'마시다',ex:'毎日[まいにち]コーヒーを飲[の]みます。',exKo:'매일 커피를 마십니다.',level:'N5'},
+ {word:'買う',read:'かう',pos:'v',mean:'사다',ex:'新[あたら]しい辞書[じしょ]を買[か]いたいです。',exKo:'새 사전을 사고 싶습니다.',level:'N5'},
+ {word:'高い',read:'たかい',pos:'a',mean:'비싸다 · 높다',ex:'このかばんは高[たか]いですね。',exKo:'이 가방은 비싸네요.',level:'N5'},
+ {word:'新しい',read:'あたらしい',pos:'a',mean:'새롭다',ex:'新[あたら]しい仕事[しごと]は楽[たの]しいです。',exKo:'새 일은 즐겁습니다.',level:'N5'},
+ {word:'元気',read:'げんき',pos:'na',mean:'건강함 · 활기참',ex:'お元気[げんき]ですか。',exKo:'잘 지내세요?',level:'N5'},
+ {word:'天気',read:'てんき',pos:'n',mean:'날씨',ex:'今日[きょう]はいい天気[てんき]ですね。',exKo:'오늘은 좋은 날씨네요.',level:'N5'},
+ {word:'友だち',read:'ともだち',pos:'n',mean:'친구',ex:'友[とも]だちと映画[えいが]を見[み]ました。',exKo:'친구와 영화를 봤습니다.',level:'N5'},
+ {word:'旅行',read:'りょこう',pos:'n',mean:'여행',ex:'来月[らいげつ]、日本[にほん]へ旅行[りょこう]に行[い]きます。',exKo:'다음 달에 일본으로 여행을 갑니다.',level:'N5'}
+];
+
+/* ===================== 시작 ===================== */
+load(); loadVoices();
+const _ins=installPacks(true);   /* 내장 단어팩 자동 등록 (처음 1회) */
+const VER_TEXT=APP_NAME+' '+APP_VER+' · '+APP_DATE;
+$$('.verline').forEach(el=>el.textContent=VER_TEXT);
+document.title=APP_NAME+' '+APP_VER;
+['#pasteDate','#fDate','#fileDate'].forEach(s=>{ const el=$(s); if(el) el.value=todayStr(); });
+renderHome();
+if(_ins.n) setTimeout(()=>toast('내장 단어를 등록했습니다 · '+_ins.names.join(', ')),400);
+
+/* ===================== PWA: 설치 · 오프라인 ===================== */
+(function(){
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone===true;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const card=$('#installCard'), btn=$('#btnInstall'), hint=$('#installHint');
+  let deferred=null;
+
+  function show(msg, withBtn){
+    if(!card) return;
+    card.style.display='';
+    btn.style.display = withBtn ? '' : 'none';
+    hint.innerHTML = msg;
+  }
+
+  if(isStandalone){
+    show('설치된 앱으로 실행 중입니다. 인터넷이 없어도 사용할 수 있고, 단어는 이 기기 안에 저장됩니다.', false);
+  } else if(isIOS){
+    show('아이폰·아이패드에서는 사파리 아래쪽 <b>공유 버튼(⬆️)</b> → <b>홈 화면에 추가</b>를 누르면 앱처럼 설치됩니다.', false);
+  } else {
+    show('설치하면 인터넷 없이도 열 수 있습니다. 버튼이 보이지 않으면 브라우저 주소창의 설치 아이콘을 눌러 주세요.', false);
+  }
+
+  window.addEventListener('beforeinstallprompt', e=>{
+    e.preventDefault(); deferred=e;
+    show('홈 화면에 추가하면 앱 아이콘으로 열리고, 인터넷 없이도 사용할 수 있습니다.', true);
+  });
+
+  if(btn) btn.onclick=async ()=>{
+    if(!deferred){ toast('브라우저 주소창의 설치 아이콘을 눌러 주세요.'); return; }
+    deferred.prompt();
+    const r=await deferred.userChoice;
+    deferred=null; btn.style.display='none';
+    toast(r.outcome==='accepted' ? '설치했습니다.' : '설치를 취소했습니다.');
+  };
+
+  window.addEventListener('appinstalled', ()=>{
+    show('설치가 끝났습니다. 홈 화면의 아이콘으로 열어 보세요.', false);
+  });
+
+  /* service worker 등록: 앱 껍데기를 캐시해 오프라인에서도 열리게 한다 */
+  if('serviceWorker' in navigator && location.protocol!=='file:'){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('./sw.js').then(reg=>{
+        reg.addEventListener('updatefound', ()=>{
+          const nw=reg.installing; if(!nw) return;
+          nw.addEventListener('statechange', ()=>{
+            if(nw.state==='installed' && navigator.serviceWorker.controller){
+              toast('새 버전이 준비됐습니다. 새로고침하면 적용됩니다.');
+            }
+          });
+        });
+      }).catch(err=>console.warn('sw register fail', err));
+    });
+  }
+})();
+document.addEventListener('keydown',e=>{
+  if(!$('#studyScreen').classList.contains('on')||!ses) return;
+  if(e.key==='ArrowLeft'){ $('#btnKnown').click(); }
+  if(e.key==='ArrowRight'){ $('#btnLearn').click(); }
+  if(e.key===' '){ e.preventDefault(); const b=$('#spWord'); if(b) b.click(); }
+});
+</script>
+</body>
+</html>
+<!-- 일본어 단어장 v1.5 (PWA) · 2026-09-02 -->

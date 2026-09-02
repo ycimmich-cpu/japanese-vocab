@@ -139,6 +139,8 @@
   .sheet h3{margin:2px 0 14px;font-size:16px}
   .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(10px);background:#111;color:#fff;padding:11px 16px;border-radius:14px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.22s;z-index:80;max-width:88%}
   .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.tappable{pointer-events:auto;cursor:pointer;background:#111;border:2px solid #fff;padding:14px 18px;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+  .toast.tappable:active{transform:translateX(-50%) scale(.97)}
   .empty{text-align:center;color:var(--sub);padding:60px 20px}
   .empty .big{font-size:40px;margin-bottom:10px}
   .wlist{background:var(--panel);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px}
@@ -312,6 +314,8 @@
         <div style="font-weight:800;margin-bottom:10px">휴대폰·PC에 설치</div>
         <button class="btn block sm primary" id="btnInstall" style="display:none">홈 화면에 추가</button>
         <div class="hint" id="installHint" style="margin:12px 0 0"></div>
+        <button class="btn block sm" id="btnCheckUpdate" style="margin-top:10px">🔄 업데이트 확인</button>
+        <div class="hint" style="margin:10px 0 0">설치한 앱에는 새로고침 버튼이 없습니다. 새 버전이 있으면 위 버튼으로 바로 적용할 수 있습니다.</div>
       </div>
       <div class="card">
         <div style="font-weight:800;margin-bottom:10px">데이터</div>
@@ -393,7 +397,7 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v1.6';
+const APP_VER='v1.6.1';
 const APP_DATE='2026-09-02';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
@@ -409,7 +413,19 @@ function save(){
   catch(e){toast('저장 공간이 가득 찼습니다. 이미지를 줄이거나 백업 후 정리해 주세요.');}
 }
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2200);}
+/* toast(메시지) — 잠깐 떴다 사라짐
+   toast(메시지, 함수) — 눌러서 실행할 수 있는 알림. 설치한 앱에는 새로고침 버튼이 없으므로
+   업데이트 안내는 반드시 이 형태로 띄운다. */
+function toast(m,onTap,ms){
+  const t=$('#toast');
+  const hide=()=>{ t.classList.remove('on'); t.classList.remove('tappable'); t.onclick=null; };
+  t.textContent=m;
+  t.classList.add('on');
+  t.classList.toggle('tappable', !!onTap);
+  t.onclick = onTap ? ()=>{ hide(); onTap(); } : null;
+  clearTimeout(t._t);
+  t._t=setTimeout(hide, ms || (onTap ? 15000 : 2200));
+}
 function todayStr(d){const x=d?new Date(d):new Date();return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
@@ -1125,17 +1141,33 @@ if(_ins.n) setTimeout(()=>toast('내장 단어를 등록했습니다 · '+_ins.n
   });
 
   /* service worker 등록: 앱 껍데기를 캐시해 오프라인에서도 열리게 한다 */
+  const askReload=()=>toast('새 버전이 준비됐습니다 · 눌러서 지금 적용', ()=>location.reload());
+
   if('serviceWorker' in navigator && location.protocol!=='file:'){
     window.addEventListener('load', ()=>{
       navigator.serviceWorker.register('./sw.js').then(reg=>{
+        /* 페이지를 열기 전에 이미 새 버전이 대기 중이던 경우 */
+        if(reg.waiting && navigator.serviceWorker.controller) askReload();
         reg.addEventListener('updatefound', ()=>{
           const nw=reg.installing; if(!nw) return;
           nw.addEventListener('statechange', ()=>{
-            if(nw.state==='installed' && navigator.serviceWorker.controller){
-              toast('새 버전이 준비됐습니다. 새로고침하면 적용됩니다.');
-            }
+            if(nw.state==='installed' && navigator.serviceWorker.controller) askReload();
           });
         });
+        /* 설정의 "업데이트 확인" 버튼 */
+        const chk=$('#btnCheckUpdate');
+        if(chk) chk.onclick=async ()=>{
+          toast('확인하는 중…');
+          try{
+            await reg.update();
+            const html=await (await fetch('./index.html?cb='+Date.now(),{cache:'no-store'})).text();
+            const live=(html.match(/const APP_VER='([^']+)'/)||[])[1];
+            if(live && live!==APP_VER) toast('새 버전 '+live+' 있음 · 눌러서 지금 적용', ()=>location.reload());
+            else toast('최신 버전입니다 ('+APP_VER+').');
+          }catch(err){
+            toast('확인하지 못했습니다. 인터넷 연결을 확인해 주세요.');
+          }
+        };
       }).catch(err=>console.warn('sw register fail', err));
     });
   }
@@ -1149,4 +1181,4 @@ document.addEventListener('keydown',e=>{
 </script>
 </body>
 </html>
-<!-- 일본어 단어장 v1.6 (PWA) · 2026-09-02 -->
+<!-- 일본어 단어장 v1.6.1 (PWA) · 2026-09-02 -->

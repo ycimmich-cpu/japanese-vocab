@@ -410,7 +410,7 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v2.1';
+const APP_VER='v2.1.1';
 const APP_DATE='2026-09-02';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
@@ -2069,6 +2069,17 @@ if(_ins.n) setTimeout(()=>toast('수업 '+_ins.names.length+'회분 · '+_ins.n+
     hint.innerHTML = msg;
   }
 
+  /* PC에서 파일을 더블클릭해 연 경우(file://). 설치·자동 업데이트가 원래 불가능한 환경이므로
+     엉뚱한 안내 대신 웹 주소를 알려 준다. */
+  const isFile = location.protocol==='file:';
+  if(isFile){
+    const chk=$('#btnCheckUpdate'); if(chk) chk.style.display='none';
+    show('PC에서 파일을 직접 열어 실행 중입니다. 단어는 이 브라우저 안에 저장됩니다.<br>'+
+         '휴대폰 설치와 자동 업데이트는 웹 주소에서만 됩니다 — '+
+         '<b>ycimmich-cpu.github.io/japanese-vocab</b><br>'+
+         '새 버전은 이 파일을 새로 받아 바꿔 주세요. 바꾸기 전에 아래에서 <b>백업을 먼저 내보내세요.</b>', false);
+    return;
+  }
   if(isStandalone){
     show('설치된 앱으로 실행 중입니다. 인터넷이 없어도 사용할 수 있고, 단어는 이 기기 안에 저장됩니다.', false);
   } else if(isIOS){
@@ -2135,4 +2146,4 @@ document.addEventListener('keydown',e=>{
 </script>
 </body>
 </html>
-<!-- 일본어 단어장 v2.1 (PWA) · 2026-09-02 -->
+<!-- 일본어 단어장 v2.1.1 (PWA) · 2026-09-02 -->

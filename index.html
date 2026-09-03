@@ -167,6 +167,9 @@
   .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
   .toast.tappable{pointer-events:auto;cursor:pointer;background:#111;border:2px solid #fff;padding:14px 18px;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
   .toast.tappable:active{transform:translateX(-50%) scale(.97)}
+  /* 시트가 열려 있으면 토스트를 위로 올린다 — 아래에 두면 시트의 버튼을 덮는다 */
+  .sheet.on ~ .toast{bottom:auto;top:calc(14px + env(safe-area-inset-top))}
+  .sheet.on ~ .toast.on{transform:translateX(-50%) translateY(0)}
   .empty{text-align:center;color:var(--sub);padding:60px 20px}
   .empty .big{font-size:40px;margin-bottom:10px}
   .wlist{background:var(--panel);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px}
@@ -181,6 +184,27 @@
   .hint{font-size:12px;color:var(--sub);line-height:1.7;background:var(--soft);padding:12px 14px;border-radius:14px;margin-bottom:12px}
   .verline{text-align:center;color:var(--sub);font-size:11px;letter-spacing:.2px;padding:22px 0 6px;opacity:.85}
   code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:var(--soft);padding:1px 5px;border-radius:6px}
+
+  /* ---------- 사진으로 추가 (v2.3) ---------- */
+  .cambtn{padding:22px 16px;font-size:17px;border-radius:20px}
+  .shot{background:var(--panel);border-radius:18px;box-shadow:var(--shadow);padding:12px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start}
+  .shot img{width:74px;height:74px;object-fit:cover;border-radius:12px;flex:none;background:var(--soft)}
+  .shot .st{font-size:13px;font-weight:800;display:flex;align-items:center;gap:7px}
+  .shot .msg{font-size:12px;color:var(--sub);margin-top:4px;line-height:1.6;word-break:break-word}
+  .shot .acts{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+  .shot .acts .btn{padding:6px 11px;font-size:12px;border-radius:10px}
+  .spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--ink);border-radius:50%;animation:sp .7s linear infinite;flex:none}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  /* 모션을 줄이는 설정에서도 "돌고 있다"는 사실은 남겨야 한다. 멈추지 않고 아주 느리게만 돌린다 */
+  @media (prefers-reduced-motion: reduce){ .spin{animation-duration:3s} }
+  .revrow{display:flex;gap:10px;align-items:flex-start;padding:11px 2px;border-bottom:1px solid var(--line)}
+  .revrow:last-child{border-bottom:none}
+  .revrow input[type=checkbox]{width:20px;height:20px;flex:none;margin-top:3px}
+  .revrow .jp{font-family:var(--jp);font-size:18px;font-weight:800;line-height:1.3}
+  .revrow .rd{font-family:var(--jp);font-size:11px;color:var(--sub)}
+  .revrow .mn{font-size:13px;margin-top:2px;font-weight:600}
+  .revrow .exs{font-family:var(--jp);font-size:12px;color:var(--sub);margin-top:3px;line-height:1.6}
+  .revrow.off{opacity:.4}
 </style>
 </head>
 <body>
@@ -241,15 +265,25 @@
     <div class="topbar"><h1>단어 추가</h1></div>
     <div class="body">
       <div class="seg" id="addMode" style="margin-bottom:14px">
-        <button data-m="paste" class="on">붙여넣기</button>
+        <button data-m="cam" class="on">📷 사진</button>
+        <button data-m="paste">붙여넣기</button>
         <button data-m="form">직접 입력</button>
         <button data-m="file">파일</button>
       </div>
 
-      <div id="addPaste">
+      <div id="addCam">
+        <button class="btn primary block cambtn" id="btnShoot">📷 사진 찍어 단어 추가</button>
+        <input type="file" id="camInput" accept="image/*" capture="environment" multiple style="display:none">
+        <button class="btn block sm" id="btnPick" style="margin-top:8px">앨범에서 고르기</button>
+        <input type="file" id="pickInput" accept="image/*" multiple style="display:none">
+        <div class="field" style="margin-top:14px"><label>수업 날짜</label><input type="date" id="camDate"></div>
+        <div class="hint" id="camHint"></div>
+        <div id="shotList"></div>
+      </div>
+
+      <div id="addPaste" style="display:none">
         <div class="hint">
-          <b>① 사진으로 추가하기</b> — 수업 자료를 찍어 Claude 앱에 올리고, 아래 버튼으로 복사한 요청문을 함께 보내세요.
-          받은 JSON을 그대로 아래 칸에 붙여넣으면 됩니다.<br>
+          <b>① 사진은 📷 탭에서</b> — 찍으면 바로 인식해 등록합니다. 여기는 Claude 앱에서 받은 JSON을 옮겨 담는 곳입니다.<br>
           <b>② 직접 입력</b> — 한 줄에 한 단어씩, 구분자는 <code>|</code> · 탭 · <code>/</code>.<br>
           <b>단어[후리가나] | 품사 | 뜻 | 예문 | 예문 해석 | 레벨</b><br>
           예문의 한자도 <code>漢字[かんじ]</code> 형식으로 쓰면 후리가나가 위에 붙습니다. 뒤쪽 항목은 비워도 됩니다.
@@ -287,7 +321,7 @@
       <div id="addFile" style="display:none">
         <div class="hint">
           <b>텍스트(.txt/.csv) · JSON(.json)</b> 파일은 여기서 바로 읽습니다.<br>
-          <b>사진 · PDF · 워드</b>는 Claude 대화창에 그대로 올려 주세요. 단어·뜻·예문으로 정리한 <code>.json</code> 파일을 만들어 드리면, 그 파일을 여기서 불러오면 됩니다.
+          <b>사진</b>은 📷 탭에서 바로 처리됩니다. <b>PDF · 워드</b>는 Claude 대화창에 올려 주세요. 정리한 <code>.json</code> 파일을 만들어 드리면 여기서 불러오면 됩니다.
         </div>
         <div class="field"><label>파일 선택</label><input type="file" id="fileInput" accept=".txt,.csv,.json,.tsv"></div>
         <div class="field"><label>입력 날짜</label><input type="date" id="fileDate"></div>
@@ -355,6 +389,22 @@
         <div class="hint" id="installHint" style="margin:12px 0 0"></div>
         <button class="btn block sm" id="btnCheckUpdate" style="margin-top:10px">🔄 업데이트 확인</button>
         <div class="hint" style="margin:10px 0 0">설치한 앱에는 새로고침 버튼이 없습니다. 새 버전이 있으면 위 버튼으로 바로 적용할 수 있습니다.</div>
+      </div>
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:10px">사진 인식 (AI)</div>
+        <div class="hint" style="margin-bottom:12px">
+          사진을 찍으면 단어·읽는 법·뜻·예문까지 자동으로 만들어 등록합니다. Claude API 키가 필요하고,
+          쓴 만큼만 차감됩니다 (사진 한 장에 몇 원 수준).<br>
+          키는 <b>이 기기 안에만</b> 저장되고, 백업 파일에는 들어가지 않습니다.
+          키가 없어도 사진 보관과 <b>Claude 앱으로 보내기</b>는 그대로 쓸 수 있습니다.
+        </div>
+        <div class="field"><label>API 키</label><input id="aiKey" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false"></div>
+        <div class="field"><label>사용할 모델</label><select id="aiModel"><option value="">키를 저장하면 목록을 불러옵니다</option></select></div>
+        <div class="row" style="gap:8px">
+          <button class="btn sm primary grow" id="btnAiSave">저장하고 연결 확인</button>
+          <button class="btn sm" id="btnAiClear">키 삭제</button>
+        </div>
+        <div class="hint" id="aiStat" style="margin:10px 0 0"></div>
       </div>
       <div class="card">
         <div style="font-weight:800;margin-bottom:10px">데이터</div>
@@ -431,6 +481,22 @@
 </div>
 
 <!-- 단어 상세/편집 시트 -->
+<!-- 인식 결과 확인 시트 -->
+<div class="sheet" id="reviewSheet"><div class="inner">
+  <h3>인식 결과 확인</h3>
+  <div class="hint" style="margin-bottom:10px">등록할 단어만 남기고 체크를 풀어 주세요. 등록한 뒤에도 단어장에서 고칠 수 있습니다.</div>
+  <div class="row" style="gap:8px;margin-bottom:10px">
+    <button class="btn sm" id="revAll">전체 선택</button>
+    <button class="btn sm" id="revNone">전체 해제</button>
+    <div class="grow"></div>
+    <span class="pill" id="revCount">0개</span>
+  </div>
+  <div class="field"><label>등록 날짜</label><input type="date" id="revDate"></div>
+  <div id="revList" style="max-height:42vh;overflow:auto;margin-bottom:12px"></div>
+  <button class="btn primary block" id="revAdd">단어장에 추가</button>
+  <button class="btn block" style="margin-top:8px" id="revCancel">나중에</button>
+</div></div>
+
 <div class="sheet" id="editSheet"><div class="inner" id="editInner"></div></div>
 
 <div class="toast" id="toast"></div>
@@ -438,8 +504,8 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v2.2';
-const APP_DATE='2026-09-02';   /* 마지막 수정일 */
+const APP_VER='v2.3';
+const APP_DATE='2026-09-03';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
 const KEY='jvocab.v1';
@@ -528,6 +594,7 @@ function go(name){
   if(name==='home') renderHome();
   if(name==='list') renderList();
   if(name==='settings') renderSettings();
+  if(name==='add' && typeof renderShots==='function') renderShots();
   window.scrollTo(0,0);
 }
 window.go=go;
@@ -682,6 +749,7 @@ function addWords(arr,quiet){
 }
 $$('#addMode button').forEach(b=>b.onclick=()=>{
   $$('#addMode button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  $('#addCam').style.display=b.dataset.m==='cam'?'':'none';
   $('#addPaste').style.display=b.dataset.m==='paste'?'':'none';
   $('#addForm').style.display=b.dataset.m==='form'?'':'none';
   $('#addFile').style.display=b.dataset.m==='file'?'':'none';
@@ -1066,6 +1134,7 @@ function renderSettings(){
   $('#autoSpeak').checked=S.settings.autoSpeak; $('#autoSpeakEx').checked=S.settings.autoSpeakEx;
   $('#autoAdvance').checked=S.settings.autoAdvance; $('#advSec').value=S.settings.advSec; $('#advVal').textContent=S.settings.advSec;
   $('#hideMeaning').checked=S.settings.hideMeaning;
+  if(typeof renderAI==='function') renderAI();
 }
 $('#voiceSel').onchange=e=>{S.settings.voice=e.target.value;save();};
 $('#rateSel').oninput=e=>{S.settings.rate=+e.target.value;$('#rateVal').textContent=e.target.value;save();};
@@ -2085,6 +2154,365 @@ renderHome();
 if(_ins.n) setTimeout(()=>toast('수업 '+_ins.names.length+'회분 · '+_ins.n+'단어를 등록했습니다.'),400);
 
 
+/* ===================== 사진으로 단어 추가 (v2.3) =====================
+   설계 메모 — 나중에 고칠 사람을 위해 근거를 남긴다.
+
+   1) API 키를 S에 넣지 않는다.
+      S는 "전체 백업 내보내기"로 통째로 파일이 되어 나간다. 키를 S에 두면
+      백업 파일에 키가 실려 나가고, 그 파일은 메일·클라우드로 옮겨 다닌다.
+      그래서 키는 별도 저장소 jvocab.ai 에 둔다.
+
+   2) 사진도 S에 넣지 않는다.
+      사진은 한 장에 수백 KB라 localStorage 용량 초과가 실제로 일어난다.
+      단어와 같은 곳에 두면 사진 때문에 난 저장 실패가 단어 902개까지 함께 날린다.
+      저장소를 나누면 최악의 경우에도 잃는 것은 사진뿐이다.
+
+   3) 성공한 사진은 즉시 지운다. 보관함에는 미처리·실패분만 남는다.
+
+   4) 확인 화면을 반드시 거친다.
+      인식은 대체로 정확하지만 틀린 단어가 조용히 섞이는 것이 이 앱에서
+      가장 비싼 실패다. 탭 한 번을 더 받고 데이터 신뢰도를 지킨다. */
+
+const AI_STORE='jvocab.ai', SHOT_STORE='jvocab.shots';
+let AI={key:'',model:'',models:[]};
+let SHOTS=[];
+
+function loadAI(){ try{const r=localStorage.getItem(AI_STORE); if(r) AI=Object.assign(AI,JSON.parse(r)||{});}catch(e){} }
+function saveAI(){ try{localStorage.setItem(AI_STORE,JSON.stringify(AI));}catch(e){} }
+function loadShots(){ try{const r=localStorage.getItem(SHOT_STORE); if(r) SHOTS=JSON.parse(r)||[];}catch(e){SHOTS=[];}
+  /* 앱이 꺼진 사이 "인식 중"으로 멈춘 것은 대기로 되돌린다 */
+  SHOTS.forEach(s=>{ if(s.status==='work') s.status='wait'; }); }
+function saveShots(){ try{ localStorage.setItem(SHOT_STORE,JSON.stringify(SHOTS)); return true; }catch(e){ return false; } }
+
+/* ---------- 사진 준비 ---------- */
+function prepImage(file,cb){
+  const r=new FileReader();
+  r.onload=e=>{
+    const im=new Image();
+    im.onload=()=>{
+      /* 긴 변 1400px. 더 키워도 글자 인식이 눈에 띄게 좋아지지 않고 저장 용량과 전송 시간만 늘어난다 */
+      const max=1400, sc=Math.min(1,max/Math.max(im.width,im.height));
+      const c=document.createElement('canvas');
+      c.width=Math.max(1,Math.round(im.width*sc)); c.height=Math.max(1,Math.round(im.height*sc));
+      const x=c.getContext('2d');
+      x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height);   /* 투명 PNG가 검게 되는 것을 막는다 */
+      x.drawImage(im,0,0,c.width,c.height);
+      try{ cb(c.toDataURL('image/jpeg',0.78)); }catch(err){ cb(''); }
+    };
+    im.onerror=()=>cb('');
+    im.src=e.target.result;
+  };
+  r.onerror=()=>cb('');
+  r.readAsDataURL(file);
+}
+
+/* ---------- Claude API ---------- */
+const VISION_PROMPT = CLAUDE_PROMPT + '\n' + [
+'',
+'추가 지시 (사진 인식)',
+'- 사진 속 표·손글씨·세로쓰기도 최대한 정확히 읽을 것',
+'- 확실하지 않은 글자는 추측해서 지어내지 말 것. 빼는 편이 낫다',
+'- 단어가 아닌 문장·머리말·쪽번호·설명은 제외할 것',
+'- 읽을 수 있는 단어가 없으면 빈 배열 [] 만 출력할 것',
+'- 다른 말 없이 JSON 배열만 출력할 것'
+].join('\n');
+
+function aiHeaders(){
+  return {'content-type':'application/json','x-api-key':AI.key,
+          'anthropic-version':'2023-06-01',
+          'anthropic-dangerous-direct-browser-access':'true'};
+}
+/* 실패를 사용자 말로 옮긴다. "500 error"는 사용자가 할 수 있는 일을 알려주지 않는다 */
+function aiErr(status, body){
+  const t=(body&&body.error&&body.error.message)||'';
+  if(status===401||status===403) return 'API 키가 올바르지 않습니다. 설정에서 다시 확인해 주세요.';
+  if(status===400&&/credit|balance/i.test(t)) return '크레딧이 부족합니다. 콘솔에서 충전한 뒤 다시 시도해 주세요.';
+  if(status===404&&/model/i.test(t)) return '선택한 모델을 쓸 수 없습니다. 설정에서 모델을 다시 골라 주세요.';
+  if(status===413) return '사진 용량이 너무 큽니다. 나눠서 찍어 주세요.';
+  if(status===429) return '요청이 몰렸습니다. 잠시 뒤 다시 시도해 주세요.';
+  if(status>=500) return '서버가 혼잡합니다. 잠시 뒤 다시 시도해 주세요.';
+  return '인식하지 못했습니다'+(t?' ('+t.slice(0,90)+')':'')+'.';
+}
+async function aiModels(){
+  let r;
+  try{ r=await fetch('https://api.anthropic.com/v1/models?limit=100',{headers:aiHeaders()}); }
+  catch(e){ throw new Error('인터넷에 연결되지 않았습니다.'); }
+  const j=await r.json().catch(()=>null);
+  if(!r.ok) throw new Error(aiErr(r.status,j));
+  /* capabilities가 없는 모델은 사진을 지원하는 것으로 본다 (예전 응답 형식 대비) */
+  return ((j&&j.data)||[])
+    .filter(m=>!m.capabilities || ((m.capabilities.image_input||{}).supported!==false))
+    .map(m=>({id:m.id,name:m.display_name||m.id}));
+}
+/* 모델 이름을 코드에 못 박지 않는다. 모델은 바뀌고 은퇴한다 — 계정에서 실제로 쓸 수 있는 목록을 받아 고른다 */
+function pickModel(list){
+  const by=re=>(list.find(m=>re.test(m.id))||{}).id;
+  return by(/sonnet/i)||by(/haiku/i)||by(/opus/i)||(list[0]||{}).id||'';
+}
+async function aiRecognize(dataUrl){
+  const m=/^data:(image\/[a-zA-Z+]+);base64,([\s\S]*)$/.exec(dataUrl||'');
+  if(!m) throw new Error('사진을 읽지 못했습니다.');
+  let r;
+  try{
+    r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:aiHeaders(),
+      body:JSON.stringify({model:AI.model,max_tokens:8000,messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:m[1],data:m[2]}},
+        {type:'text',text:VISION_PROMPT}]}]})});
+  }catch(e){ throw new Error('인터넷에 연결되지 않았습니다.'); }
+  const j=await r.json().catch(()=>null);
+  if(!r.ok) throw new Error(aiErr(r.status,j));
+  const txt=(((j&&j.content)||[]).filter(c=>c.type==='text').map(c=>c.text).join('')||'').trim();
+  let arr=null;
+  try{ arr=JSON.parse(stripFence(txt)); }
+  catch(e){
+    const mm=txt.match(/\[[\s\S]*\]/);        /* 설명이 섞여 나온 경우 배열만 건져낸다 */
+    if(mm){ try{ arr=JSON.parse(mm[0]); }catch(e2){} }
+  }
+  if(!Array.isArray(arr)) throw new Error('결과를 이해하지 못했습니다. 다시 시도해 주세요.');
+  return arr;
+}
+
+/* ---------- 보관함 ---------- */
+function addShots(files,date){
+  const list=[].slice.call(files||[]).filter(f=>/^image\//.test(f.type||''));
+  if(!list.length){ toast('사진을 찾지 못했습니다.'); return; }
+  let left=list.length; const added=[];
+  const done=()=>{
+    if(--left>0) return;
+    if(!saveShots()){
+      /* 용량 초과 — 방금 넣은 것만 되돌린다. 단어는 다른 저장소라 안전하다 */
+      added.forEach(id=>{ const i=SHOTS.findIndex(s=>s.id===id); if(i>=0) SHOTS.splice(i,1); });
+      saveShots();
+      toast('저장 공간이 부족합니다. 보관함의 사진을 먼저 정리해 주세요.',null,5000);
+    }else if(added.length && !(AI.key&&AI.model)){
+      /* 자동 인식이 이어지는 경우에는 알리지 않는다 — 곧바로 "인식 중"과 확인 시트가 뜬다 */
+      toast(added.length+'장을 보관함에 담았습니다.');
+    }
+    renderShots(); queueAuto=true; runQueue();
+  };
+  list.forEach(f=>prepImage(f,img=>{
+    if(img){ const s={id:uid(),img:img,date:date||todayStr(),status:'wait',msg:'',ts:Date.now()}; SHOTS.unshift(s); added.push(s.id); }
+    done();
+  }));
+}
+function dropShot(id){ const i=SHOTS.findIndex(s=>s.id===id); if(i>=0) SHOTS.splice(i,1); saveShots(); renderShots(); }
+
+let queueBusy=false;
+/* 사용자가 방금 찍었거나 «다시 시도»를 눌렀을 때만 확인 시트를 자동으로 연다.
+   앱을 켜자마자 밀린 사진 때문에 시트가 화면을 덮으면, 하려던 일을 막는 꼴이 된다. */
+let queueAuto=false;
+async function runQueue(){
+  if(queueBusy) return;
+  if(!AI.key||!AI.model) return;
+  if(navigator.onLine===false) return;
+  const s=SHOTS.find(x=>x.status==='wait');
+  if(!s) return;
+  queueBusy=true;
+  s.status='work'; s.msg=''; saveShots(); renderShots();
+  try{
+    const arr=await aiRecognize(s.img);
+    s.status='done'; s.result=arr; s.msg=''; saveShots(); renderShots();
+    const open=!$('#reviewSheet').classList.contains('on');
+    if(queueAuto && open) openReview(s);
+    else toast('단어 '+arr.length+'개를 찾았습니다 · 눌러서 확인',()=>openReview(s));
+  }catch(e){
+    s.status='err'; s.msg=(e&&e.message)||'실패했습니다.'; saveShots(); renderShots();
+    toast('인식 실패 · '+s.msg,null,5000);
+  }
+  queueBusy=false;
+  if(!SHOTS.some(x=>x.status==='wait')) queueAuto=false;
+  setTimeout(runQueue,400);
+}
+
+function shotBtn(act,id,label,cls){
+  return '<button class="btn '+(cls||'')+'" data-act="'+act+'" data-id="'+id+'">'+label+'</button>';
+}
+function renderShots(){
+  const box=$('#shotList'); if(!box) return;
+  const hint=$('#camHint');
+  if(hint){
+    hint.innerHTML = AI.key
+      ? '찍으면 자동으로 인식해 확인 화면을 띄웁니다. 인터넷이 없으면 보관해 두었다가 연결되면 이어서 처리합니다.'
+      : '지금은 <b>사진만 보관</b>합니다. 설정 → <b>사진 인식 (AI)</b>에 API 키를 넣으면 찍는 즉시 단어로 등록됩니다. 키가 없어도 아래 <b>Claude 앱으로</b>로 처리할 수 있습니다.';
+  }
+  if(!SHOTS.length){ box.innerHTML=''; return; }
+  box.innerHTML='<div class="datehead">사진 보관함 <span class="n">'+SHOTS.length+'장</span></div>'+
+    SHOTS.map(s=>{
+      let st,acts;
+      if(s.status==='work'){ st='<span class="spin"></span>인식 중…'; acts=''; }
+      else if(s.status==='done'){
+        st='✅ 인식 완료 · '+((s.result||[]).length)+'개';
+        acts=shotBtn('rev',s.id,'결과 보기','primary')+shotBtn('del',s.id,'삭제');
+      } else if(s.status==='err'){
+        st='⚠️ 실패';
+        acts=shotBtn('try',s.id,'다시 시도','primary')+shotBtn('cl',s.id,'Claude 앱으로')+shotBtn('del',s.id,'삭제');
+      } else {
+        st=AI.key?'⏳ 대기 중':'📥 보관됨';
+        acts=(AI.key?shotBtn('try',s.id,'지금 인식','primary'):'')+shotBtn('cl',s.id,'Claude 앱으로')+shotBtn('del',s.id,'삭제');
+      }
+      return '<div class="shot"><img src="'+s.img+'" alt=""><div class="grow">'+
+             '<div class="st">'+st+'</div>'+
+             '<div class="msg">'+esc(s.date)+(s.msg?' · '+esc(s.msg):'')+'</div>'+
+             '<div class="acts">'+acts+'</div></div></div>';
+    }).join('');
+  box.querySelectorAll('button[data-act]').forEach(b=>b.onclick=()=>shotAct(b.dataset.act,b.dataset.id));
+}
+function shotAct(act,id){
+  const s=SHOTS.find(x=>x.id===id); if(!s) return;
+  if(act==='del'){ if(confirm('이 사진을 지울까요?')) dropShot(id); return; }
+  if(act==='rev'){ openReview(s); return; }
+  if(act==='try'){
+    if(!AI.key){ toast('설정에서 API 키를 먼저 넣어 주세요.'); go('settings'); return; }
+    s.status='wait'; s.msg=''; saveShots(); renderShots(); queueAuto=true; runQueue(); return;
+  }
+  if(act==='cl'){ sendToClaude(s); return; }
+}
+
+/* D 경로 — 키가 없거나 인식이 실패했을 때도 사진이 막다른 길로 가지 않게 한다 */
+async function sendToClaude(s){
+  try{ await navigator.clipboard.writeText(CLAUDE_PROMPT); }catch(e){}
+  let file=null;
+  try{
+    const blob=await (await fetch(s.img)).blob();
+    file=new File([blob],'단어사진_'+s.date+'.jpg',{type:'image/jpeg'});
+  }catch(e){}
+  if(file && navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({files:[file],text:CLAUDE_PROMPT});
+      toast('Claude 앱에서 받은 JSON을 «붙여넣기» 탭에 넣어 주세요.',null,6000);
+      return;
+    }catch(e){ if(e&&e.name==='AbortError') return; }
+  }
+  const a=document.createElement('a'); a.href=s.img; a.download='단어사진_'+s.date+'.jpg'; a.click();
+  toast('사진을 저장했습니다. 요청문은 복사돼 있으니 Claude 앱에 사진과 함께 올려 주세요.',null,6000);
+}
+
+/* ---------- 확인 화면 ---------- */
+let revShot=null, revItems=[];
+function updRevCount(){ $('#revCount').textContent=revItems.filter(x=>x.on).length+'개 선택'; }
+function openReview(s){
+  revShot=s;
+  revItems=((s.result||[]).filter(o=>o&&stripRuby(o.word||'').trim())).map(o=>({on:true,w:o}));
+  const guess=(s.result||[]).map(o=>o&&o.date).filter(Boolean)[0];
+  $('#revDate').value=guess||s.date||todayStr();
+  renderReview();
+  $('#reviewSheet').classList.add('on');
+}
+function renderReview(){
+  const box=$('#revList');
+  if(!revItems.length){
+    box.innerHTML='<div class="empty"><div class="big">🔍</div>이 사진에서는 단어를 찾지 못했습니다.<br>글자가 크고 밝게 나오도록 다시 찍어 보세요.</div>';
+    updRevCount(); return;
+  }
+  box.innerHTML=revItems.map((it,i)=>{
+    const w=it.w;
+    return '<label class="revrow'+(it.on?'':' off')+'">'+
+      '<input type="checkbox" data-i="'+i+'"'+(it.on?' checked':'')+'>'+
+      '<div class="grow">'+
+        '<div class="jp">'+esc(stripRuby(w.word||''))+'</div>'+
+        (w.read?'<div class="rd">'+esc(w.read)+'</div>':'')+
+        '<div class="mn">'+esc(w.mean||'')+'</div>'+
+        (w.ex?'<div class="exs">'+esc(stripRuby(w.ex))+'</div>':'')+
+      '</div></label>';
+  }).join('');
+  /* 체크할 때마다 전체를 다시 그리면 스크롤 위치가 튄다. 해당 줄만 바꾼다 */
+  box.querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{
+    const i=+c.dataset.i; revItems[i].on=c.checked;
+    const row=c.parentNode; if(row&&row.classList) row.classList.toggle('off',!c.checked);
+    updRevCount();
+  });
+  updRevCount();
+}
+function revSetAll(v){
+  revItems.forEach(x=>x.on=v);
+  $('#revList').querySelectorAll('input[type=checkbox]').forEach(c=>{
+    c.checked=v; const row=c.parentNode; if(row&&row.classList) row.classList.toggle('off',!v);
+  });
+  updRevCount();
+}
+$('#revAll').onclick=()=>revSetAll(true);
+$('#revNone').onclick=()=>revSetAll(false);
+$('#revCancel').onclick=()=>{ $('#reviewSheet').classList.remove('on'); revShot=null; renderShots(); };
+$('#revAdd').onclick=()=>{
+  const sel=revItems.filter(x=>x.on);
+  if(!sel.length){
+    /* 결과가 아예 없는 사진은 여기서 정리해 준다 */
+    if(!revItems.length && revShot){ const id=revShot.id; $('#reviewSheet').classList.remove('on'); revShot=null; dropShot(id); return; }
+    toast('등록할 단어를 하나 이상 골라 주세요.'); return;
+  }
+  /* 확인 화면에서 사용자가 눈으로 보고 정한 날짜가 우선한다 */
+  const d=$('#revDate').value||todayStr();
+  const n=addWords(sel.map(x=>makeWord(Object.assign({},x.w,{date:d}))));
+  $('#reviewSheet').classList.remove('on');
+  if(revShot) dropShot(revShot.id);
+  revShot=null;
+  if(n) go('home');
+};
+
+/* ---------- 촬영 버튼 ---------- */
+$('#btnShoot').onclick=()=>$('#camInput').click();
+$('#btnPick').onclick=()=>$('#pickInput').click();
+['#camInput','#pickInput'].forEach(sel=>{
+  $(sel).onchange=e=>{
+    const f=e.target.files;
+    if(f&&f.length) addShots(f,$('#camDate').value||todayStr());
+    e.target.value='';     /* 같은 사진을 다시 골라도 change가 뜨게 한다 */
+  };
+});
+
+/* ---------- 설정: AI ---------- */
+const MASK='••••••••••••';
+function renderAI(){
+  const k=$('#aiKey'); if(!k) return;
+  if(document.activeElement!==k){ k.value=AI.key?MASK:''; }
+  const sel=$('#aiModel');
+  if(AI.models&&AI.models.length){
+    sel.innerHTML=AI.models.map(m=>'<option value="'+esc(m.id)+'"'+(m.id===AI.model?' selected':'')+'>'+esc(m.name)+'</option>').join('');
+  }else if(AI.model){
+    sel.innerHTML='<option value="'+esc(AI.model)+'" selected>'+esc(AI.model)+'</option>';
+  }
+  $('#aiStat').innerHTML = AI.key
+    ? '연결됨 · 모델 <b>'+esc(AI.model||'-')+'</b>. 📷 탭에서 사진을 찍으면 바로 인식합니다.'
+    : '아직 키가 없습니다. 넣지 않아도 사진 보관과 <b>Claude 앱으로</b>는 그대로 쓸 수 있습니다.';
+}
+$('#aiKey').onfocus=e=>{ if(e.target.value===MASK) e.target.value=''; };
+$('#aiKey').onblur=e=>{ if(!e.target.value&&AI.key) e.target.value=MASK; };
+$('#aiModel').onchange=e=>{ if(e.target.value){ AI.model=e.target.value; saveAI(); renderAI(); } };
+$('#btnAiClear').onclick=()=>{
+  if(!confirm('저장된 API 키를 지울까요? 사진 인식이 멈춥니다.')) return;
+  AI={key:'',model:'',models:[]}; saveAI(); renderAI(); renderShots(); toast('키를 지웠습니다.');
+};
+$('#btnAiSave').onclick=async ()=>{
+  const el=$('#aiKey'), v=el.value.trim();
+  const cand=(v&&v!==MASK)?v:AI.key;
+  if(!cand){ toast('API 키를 입력해 주세요.'); return; }
+  const prev=AI.key;
+  AI.key=cand;                    /* aiModels()가 이 값으로 확인한다 */
+  $('#aiStat').textContent='확인하는 중…';
+  try{
+    const list=await aiModels();
+    if(!list.length) throw new Error('사진을 읽을 수 있는 모델이 없습니다.');
+    AI.models=list;
+    if(!list.some(m=>m.id===AI.model)) AI.model=pickModel(list);
+    saveAI(); renderAI(); renderShots();
+    toast('연결됐습니다. 이제 사진을 찍으면 바로 등록됩니다.');
+    runQueue();
+  }catch(e){
+    /* 확인되지 않은 키는 저장하지 않는다. 쓰던 키가 있었다면 그대로 되돌린다 */
+    AI.key=prev; AI.models=[];
+    renderAI();                   /* 먼저 그리고 나서 안내를 덮어쓴다 — 반대로 하면 안내가 지워진다 */
+    $('#aiStat').innerHTML='<b>연결 실패</b> · '+esc((e&&e.message)||'확인하지 못했습니다.');
+  }
+};
+
+/* ---------- 시작 ---------- */
+loadAI(); loadShots();
+{ const el=$('#camDate'); if(el) el.value=todayStr(); }
+renderShots();
+window.addEventListener('online',()=>{ renderShots(); runQueue(); });
+window.addEventListener('offline',renderShots);
+setTimeout(runQueue,1200);   /* 첫 화면이 다 그려진 뒤에 시작한다 */
+
 /* ===================== 엔소 시작 애니메이션 ===================== */
 (function(){
   const sp=document.getElementById('splash'); if(!sp) return;
@@ -2199,4 +2627,4 @@ document.addEventListener('keydown',e=>{
 </script>
 </body>
 </html>
-<!-- 일본어 단어장 v2.2 (PWA) · 2026-09-03 -->
+<!-- 일본어 단어장 v2.3 (PWA) · 2026-09-03 -->

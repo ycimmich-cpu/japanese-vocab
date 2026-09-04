@@ -205,6 +205,43 @@
   .revrow .mn{font-size:13px;margin-top:2px;font-weight:600}
   .revrow .exs{font-family:var(--jp);font-size:12px;color:var(--sub);margin-top:3px;line-height:1.6}
   .revrow.off{opacity:.4}
+
+  /* ---------- 첫 화면 (v2.4) ---------- */
+  .pickwrap{flex:1;display:flex;flex-direction:column;justify-content:center;padding:24px 18px 40px;gap:12px}
+  .pickmark{width:64px;height:64px;color:#CB4A2E;margin:0 auto 4px}
+  .pickmark svg{width:100%;height:100%;display:block}
+  .picktitle{font-size:21px;font-weight:800;text-align:center;margin:0 0 22px;letter-spacing:-.3px}
+  .pickcard{display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+            background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 18px}
+  .pickcard:active{transform:scale(.99)}
+  .pickcard .pi{font-size:28px;flex:none;width:34px;text-align:center}
+  .pickcard .pt{font-size:17px;font-weight:800}
+  .pickcard .ps{font-size:12px;color:var(--sub);margin-top:3px}
+  .pickcard .chev{font-size:20px;color:var(--sub);flex:none}
+
+  /* ---------- 지문 목록 ---------- */
+  .textcard{background:var(--panel);border-radius:18px;box-shadow:var(--shadow);padding:14px 16px;margin-bottom:10px;width:100%;text-align:left}
+  .textcard:active{transform:scale(.995)}
+  .textcard .tt{font-family:var(--jp);font-size:16px;font-weight:800;line-height:1.95}
+  .textcard .tt ruby rt{font-size:10px;color:var(--sub);font-weight:500}
+  .textcard .tm{font-size:12px;color:var(--sub);margin-top:4px;display:flex;align-items:center;gap:8px}
+  .textcard .tm .cnt{font-weight:800;color:var(--ink)}
+  .prog{height:6px;background:var(--soft);border-radius:999px;margin-top:9px;overflow:hidden}
+  .prog > i{display:block;height:100%;background:var(--ink);border-radius:999px;transition:width .3s}
+  .prog.done > i{background:var(--ok)}
+
+  /* ---------- 음독 화면 ---------- */
+  .rdcount{display:flex;align-items:baseline;justify-content:center;gap:6px}
+  .rdcount .now{font-size:40px;font-weight:800;line-height:1}
+  .rdcount .of{font-size:15px;color:var(--sub);font-weight:700}
+  .sline{font-family:var(--jp);font-size:19px;line-height:2.15;padding:11px 14px;border-radius:14px;
+         background:var(--panel);box-shadow:var(--shadow);margin-bottom:8px;width:100%;text-align:left;display:block}
+  .sline ruby rt{font-size:11px;color:var(--sub);font-weight:500}
+  .sline.on{background:var(--ink);color:var(--accent-ink)}
+  .sline.on ruby rt{color:var(--accent-ink);opacity:.75}
+  .sline:active{transform:scale(.995)}
+  .rdprev{font-family:var(--jp);font-size:15px;line-height:2;max-height:180px;overflow:auto}
+  .rdprev ruby rt{font-size:10px;color:var(--sub)}
 </style>
 </head>
 <body>
@@ -222,11 +259,31 @@
 </div>
 <div class="app">
 
+  <!-- ================= 첫 화면: 무엇을 할까 ================= -->
+  <section id="pickScreen" class="screen on">
+    <div class="pickwrap">
+      <div class="pickmark"><svg viewBox="0 0 512 512"><use href="#ensoShape" fill="currentColor"/></svg></div>
+      <h1 class="picktitle">일본어 학습</h1>
+      <button class="pickcard" data-pick="word">
+        <div class="pi">📚</div>
+        <div class="grow"><div class="pt">단어장</div><div class="ps" id="pickWordMeta">단어 카드와 퀴즈</div></div>
+        <div class="chev">›</div>
+      </button>
+      <button class="pickcard" data-pick="sent">
+        <div class="pi">📖</div>
+        <div class="grow"><div class="pt">문장 읽기</div><div class="ps" id="pickSentMeta">지문을 소리 내어 반복</div></div>
+        <div class="chev">›</div>
+      </button>
+      <div class="verline"></div>
+    </div>
+  </section>
+
   <!-- ================= 홈: 날짜별 ================= -->
-  <section id="homeScreen" class="screen on">
+  <section id="homeScreen" class="screen">
     <div class="topbar">
+      <button class="iconbtn" onclick="go('pick')" title="처음 화면">⌂</button>
       <span class="brandmark" id="brandMark"><svg viewBox="0 0 512 512"><use href="#ensoShape" fill="currentColor"/></svg></span>
-      <h1>일본어 단어장</h1>
+      <h1>단어장</h1>
       <button class="iconbtn" id="btnStudyAll" title="전체 학습">▶</button>
       <button class="iconbtn" onclick="go('settings')" title="설정">⚙</button>
     </div>
@@ -262,8 +319,12 @@
 
   <!-- ================= 추가 ================= -->
   <section id="addScreen" class="screen">
-    <div class="topbar"><h1>단어 추가</h1></div>
+    <div class="topbar">
+      <button class="iconbtn" onclick="go('pick')" title="처음 화면">⌂</button>
+      <h1 id="addTitle">단어 추가</h1>
+    </div>
     <div class="body">
+      <div id="addWordWrap">
       <div class="seg" id="addMode" style="margin-bottom:14px">
         <button data-m="cam" class="on">📷 사진</button>
         <button data-m="paste">붙여넣기</button>
@@ -326,6 +387,43 @@
         <div class="field"><label>파일 선택</label><input type="file" id="fileInput" accept=".txt,.csv,.json,.tsv"></div>
         <div class="field"><label>입력 날짜</label><input type="date" id="fileDate"></div>
         <button class="btn primary block" id="btnFileAdd">파일에서 추가</button>
+      </div>
+      </div><!-- /addWordWrap -->
+
+      <div id="addSentWrap" style="display:none">
+        <div class="seg" id="sentMode" style="margin-bottom:14px">
+          <button data-m="scam" class="on">📷 사진</button>
+          <button data-m="sfile">📄 문서</button>
+          <button data-m="stype">✍️ 직접</button>
+        </div>
+
+        <div id="sentCam">
+          <button class="btn primary block cambtn" id="btnSentShoot">📷 사진 찍어 지문 추가</button>
+          <input type="file" id="sentCamInput" accept="image/*" capture="environment" style="display:none">
+          <button class="btn block sm" id="btnSentPick" style="margin-top:8px">앨범에서 고르기</button>
+          <input type="file" id="sentPickInput" accept="image/*" style="display:none">
+        </div>
+
+        <div id="sentFile" style="display:none">
+          <div class="hint">
+            <b>PDF · 워드(.docx) · 텍스트</b> 파일에서 지문을 읽어옵니다.<br>
+            파일 안에 <code>제목: OOO</code>이 있으면 그대로 제목이 되고, 없으면 내용에 맞는 제목을 만들어 드립니다.
+          </div>
+          <div class="field"><label>파일 선택</label><input type="file" id="sentFileInput" accept=".pdf,.docx,.txt,.md,.csv"></div>
+        </div>
+
+        <div id="sentType" style="display:none">
+          <div class="field"><label>제목 (비워 두면 본문의 <code>제목:</code> 줄에서 찾습니다)</label><input id="stTitle" placeholder="私の一日"></div>
+          <div class="field"><label>본문 — 한 줄에 한 문장</label>
+            <textarea id="stBody" placeholder="毎朝[まいあさ]六時[ろくじ]に 起[お]きます。&#10;朝[あさ]ごはんを 食[た]べてから 学校[がっこう]へ 行[い]きます。"></textarea></div>
+          <div class="hint">한자에 <code>漢字[かんじ]</code>처럼 직접 달아도 되고, 아래 버튼으로 자동으로 달 수도 있습니다.</div>
+          <button class="btn block sm" id="btnFuri" style="margin-bottom:10px">ふりがな 후리가나 자동으로 달기</button>
+        </div>
+
+        <div class="field" style="margin-top:12px"><label>날짜</label><input type="date" id="sentDate"></div>
+        <div class="field"><label>목표 횟수</label><input type="number" id="sentTarget" min="1" max="9999" value="100"></div>
+        <button class="btn primary block" id="btnSentAdd" style="display:none">지문 추가</button>
+        <div class="hint" id="sentHint" style="margin-top:12px"></div>
       </div>
     </div>
   </section>
@@ -422,12 +520,61 @@
     </div>
   </section>
 
+  <!-- ================= 문장: 지문 목록 ================= -->
+  <section id="sentScreen" class="screen">
+    <div class="topbar">
+      <button class="iconbtn" onclick="go('pick')" title="처음 화면">⌂</button>
+      <span class="brandmark"><svg viewBox="0 0 512 512"><use href="#ensoShape" fill="currentColor"/></svg></span>
+      <h1>문장 읽기</h1>
+      <button class="iconbtn" onclick="go('settings')" title="설정">⚙</button>
+    </div>
+    <div class="body">
+      <div class="stat">
+        <div class="box"><div class="n" id="stTexts">0</div><div class="l">지문</div></div>
+        <div class="box"><div class="n" id="stReads">0</div><div class="l">누적 읽기</div></div>
+        <div class="box"><div class="n" id="stToday">0</div><div class="l">오늘</div></div>
+      </div>
+      <div id="textList"></div>
+      <div class="verline"></div>
+    </div>
+  </section>
+
+  <!-- ================= 문장: 음독 ================= -->
+  <section id="readScreen" class="screen">
+    <div class="studybar">
+      <button class="iconbtn" id="rdBack">‹</button>
+      <div class="grow" style="min-width:0">
+        <div id="rdTitle" style="font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+        <div id="rdMeta" class="muted" style="font-size:11px"></div>
+      </div>
+      <button class="iconbtn" id="rdEdit" title="지문 설정">⋯</button>
+    </div>
+    <div class="progressline"><i id="rdBar" style="width:0"></i></div>
+    <div class="studywrap">
+      <div class="card" style="padding:18px 16px;text-align:center">
+        <div class="rdcount"><span class="now" id="rdNow">0</span><span class="of" id="rdOf">/ 100회</span></div>
+        <div class="muted" style="font-size:12px;margin-top:6px" id="rdToday"></div>
+      </div>
+      <div class="row" style="gap:8px;margin-bottom:12px">
+        <button class="btn sm grow" id="rdPlayAll">▶ 전체 듣기</button>
+        <button class="btn sm" id="rdStop">■ 멈춤</button>
+      </div>
+      <div class="hint" style="margin-bottom:10px">문장을 탭하면 그 문장만 읽어 줍니다. 한 번 소리 내어 읽었으면 아래 <b>읽음</b>을 눌러 주세요.</div>
+      <div id="rdLines"></div>
+    </div>
+    <div class="answerbar">
+      <button class="ansbtn known" id="rdUndo" style="flex:0 0 32%">↩ 취소</button>
+      <button class="ansbtn learn" id="rdDone">✓ 읽음</button>
+    </div>
+  </section>
+
   <!-- ================= 하단 탭 ================= -->
   <nav class="tabbar" id="tabbar">
-    <button data-go="home" class="on"><span class="ic">📅</span>날짜별</button>
-    <button data-go="list"><span class="ic">📚</span>단어장</button>
+    <button data-go="home" data-mode="word" class="on"><span class="ic">📅</span>날짜별</button>
+    <button data-go="list" data-mode="word"><span class="ic">📚</span>단어장</button>
+    <button data-go="sent" data-mode="sent"><span class="ic">📖</span>지문</button>
     <button data-go="add"><span class="ic">＋</span>추가</button>
-    <button data-go="startStudy"><span class="ic">🎯</span>학습</button>
+    <button data-go="startStudy" data-mode="word"><span class="ic">🎯</span>학습</button>
     <button data-go="settings"><span class="ic">⚙</span>설정</button>
   </nav>
 </div>
@@ -481,6 +628,21 @@
 </div>
 
 <!-- 단어 상세/편집 시트 -->
+<!-- 지문 확인 시트 -->
+<div class="sheet" id="textSheet"><div class="inner">
+  <h3>지문 확인</h3>
+  <div class="hint" style="margin-bottom:10px">본문을 직접 고칠 수 있습니다. 한 줄에 한 문장, 한자는 <code>漢字[かんじ]</code> 형식입니다.</div>
+  <div class="field"><label>제목</label><input id="txTitle"></div>
+  <div class="row" style="gap:10px">
+    <div class="field grow"><label>날짜</label><input type="date" id="txDate"></div>
+    <div class="field grow"><label>목표 횟수</label><input type="number" id="txTarget" min="1" max="9999"></div>
+  </div>
+  <div class="field"><label>본문</label><textarea id="txBody" style="min-height:130px"></textarea></div>
+  <div class="field"><label>미리보기</label><div class="card rdprev" id="txPrev" style="margin:0"></div></div>
+  <button class="btn primary block" id="txAdd">지문 추가</button>
+  <button class="btn block" style="margin-top:8px" id="txCancel">취소</button>
+</div></div>
+
 <!-- 인식 결과 확인 시트 -->
 <div class="sheet" id="reviewSheet"><div class="inner">
   <h3>인식 결과 확인</h3>
@@ -504,15 +666,16 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v2.3';
-const APP_DATE='2026-09-03';   /* 마지막 수정일 */
+const APP_VER='v2.4';
+const APP_DATE='2026-09-04';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
 const KEY='jvocab.v1';
-const DEF_SET={voice:'',rate:0.9,autoSpeak:true,autoSpeakEx:false,autoAdvance:false,advSec:7,hideMeaning:false};
-let S={words:[],settings:Object.assign({},DEF_SET),installed:[]};
+const DEF_SET={voice:'',rate:0.9,autoSpeak:true,autoSpeakEx:false,autoAdvance:false,advSec:7,hideMeaning:false,
+               readTarget:100};
+let S={words:[],texts:[],settings:Object.assign({},DEF_SET),installed:[]};
 function load(){
-  try{const r=localStorage.getItem(KEY); if(r){const o=JSON.parse(r); S.words=o.words||[]; S.settings=Object.assign({},DEF_SET,o.settings||{}); S.installed=o.installed||[];}}
+    try{const r=localStorage.getItem(KEY); if(r){const o=JSON.parse(r); S.words=o.words||[]; S.texts=(o.texts||[]).map(normText); S.settings=Object.assign({},DEF_SET,o.settings||{}); S.installed=o.installed||[];}}
   catch(e){console.warn('load fail',e);}
 }
 function save(){
@@ -584,21 +747,53 @@ function speak(text,cb){
 }
 
 /* ===================== 화면 전환 ===================== */
+/* 모드: 'word' 단어장 / 'sent' 문장 읽기. 첫 화면에서 고른다 */
+let MODE='word';
+/* 음독 상태 — go()가 화면을 옮길 때 stopRead()를 부르므로 반드시 go()보다 먼저 선언한다.
+   아래쪽에 두면 초기화 전 접근(TDZ)으로 앱 시작이 통째로 멈춘다 (v2.4 개발 중 실제로 겪음) */
+let curText=null, rdToken=0;
+function syncTabs(){
+  $$('#tabbar button').forEach(b=>{
+    const only=b.dataset.mode;
+    b.style.display=(!only||only===MODE)?'':'none';
+  });
+}
+function pick(m){
+  MODE=m; syncTabs();
+  if(typeof stopRead==='function') stopRead();
+  go(m==='sent'?'sent':'home');
+}
 function go(name){
   if(name==='startStudy'){ openStart(); return; }
+  if(typeof stopRead==='function' && name!=='read') stopRead();
   $$('.screen').forEach(s=>s.classList.remove('on'));
-  const map={home:'#homeScreen',list:'#listScreen',add:'#addScreen',study:'#studyScreen',quiz:'#quizScreen',settings:'#settingsScreen'};
+  const map={pick:'#pickScreen',home:'#homeScreen',list:'#listScreen',add:'#addScreen',
+             study:'#studyScreen',quiz:'#quizScreen',settings:'#settingsScreen',
+             sent:'#sentScreen',read:'#readScreen'};
   $(map[name]).classList.add('on');
-  $('#tabbar').style.display=(name==='study'||name==='quiz')?'none':'flex';
+  const bare=(name==='study'||name==='quiz'||name==='pick'||name==='read');
+  $('#tabbar').style.display=bare?'none':'flex';
+  if(!bare) syncTabs();
   $$('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.go===name));
+  if(name==='pick') renderPick();
   if(name==='home') renderHome();
   if(name==='list') renderList();
+  if(name==='sent') renderTexts();
   if(name==='settings') renderSettings();
-  if(name==='add' && typeof renderShots==='function') renderShots();
+  if(name==='add'){ syncAddMode(); if(typeof renderShots==='function') renderShots(); }
   window.scrollTo(0,0);
 }
 window.go=go;
 $$('#tabbar button').forEach(b=>b.onclick=()=>go(b.dataset.go));
+$$('.pickcard').forEach(b=>b.onclick=()=>pick(b.dataset.pick));
+/* 추가 화면은 모드에 따라 단어용/지문용으로 갈린다 */
+function syncAddMode(){
+  const w=MODE!=='sent';
+  $('#addTitle').textContent = w?'단어 추가':'지문 추가';
+  $('#addWordWrap').style.display = w?'':'none';
+  $('#addSentWrap').style.display = w?'none':'';
+  if(!w && typeof renderSentAdd==='function') renderSentAdd();
+}
 
 /* ===================== 홈(날짜별) ===================== */
 function groupByDate(){
@@ -1167,14 +1362,25 @@ $('#importInput').onchange=e=>{
       });
       const dup=list.length-add.length;
       S.words=S.words.concat(add);
+      /* 지문도 함께 옮긴다 — 읽은 횟수는 다시 만들 수 없는 기록이다 */
+      let tAdd=0;
+      if(Array.isArray(j.texts)){
+        const tk=new Set(S.texts.map(tkey));
+        j.texts.forEach(o=>{
+          const t=normText(o), k=tkey(t);
+          if(tk.has(k)) return;
+          tk.add(k); S.texts.push(t); tAdd++;
+        });
+      }
       if(j.settings) S.settings=Object.assign({},S.settings,j.settings);
       if(Array.isArray(j.installed)) j.installed.forEach(id=>{ if(S.installed.indexOf(id)<0) S.installed.push(id); });
-      save(); toast(add.length+'개 단어를 불러왔습니다'+(dup?' · 중복 '+dup+'개 제외':'')+'.'); renderHome();
+      save(); toast(add.length+'개 단어'+(tAdd?' · 지문 '+tAdd+'편':'')+'을 불러왔습니다'+(dup?' · 중복 '+dup+'개 제외':'')+'.');
+      renderHome(); renderTexts();
     }catch(err){toast('파일을 읽지 못했습니다.');}
   };
   r.readAsText(f,'utf-8');
 };
-$('#btnReset').onclick=()=>{ if(confirm('모든 단어와 설정을 삭제할까요? 되돌릴 수 없습니다.')){ S={words:[],settings:Object.assign({},DEF_SET),installed:PACKS.map(p=>p.id)}; save(); renderHome(); renderSettings(); toast('전체 삭제했습니다.'); } };
+$('#btnReset').onclick=()=>{ if(confirm('모든 단어·지문과 설정을 삭제할까요? 읽은 횟수 기록도 함께 사라지며 되돌릴 수 없습니다.')){ S={words:[],texts:[],settings:Object.assign({},DEF_SET),installed:PACKS.map(p=>p.id)}; save(); renderHome(); renderTexts(); renderSettings(); toast('전체 삭제했습니다.'); } };
 $('#btnPacks').onclick=()=>{ const r=installPacks(false); renderHome(); toast(r.n?('내장 단어 '+r.n+'개를 등록했습니다.'):'내장 단어가 이미 모두 등록되어 있습니다.'); };
 
 /* ===================== 내장 단어팩 (지침 10) ===================== */
@@ -2148,8 +2354,11 @@ const _ins=installPacks(true);   /* 내장 단어팩 자동 등록 (처음 1회)
 const VER_TEXT=APP_NAME+' '+APP_VER+' · '+APP_DATE;
 $$('.verline').forEach(el=>el.textContent=VER_TEXT);
 document.title=APP_NAME+' '+APP_VER;
-['#pasteDate','#fDate','#fileDate'].forEach(s=>{ const el=$(s); if(el) el.value=todayStr(); });
+['#pasteDate','#fDate','#fileDate','#sentDate'].forEach(s=>{ const el=$(s); if(el) el.value=todayStr(); });
 renderHome();
+renderTexts();
+syncTabs();
+go('pick');          /* 앱을 열면 무엇을 할지부터 고른다 */
 /* 팩 이름을 전부 나열하면 알림이 화면을 덮으므로 개수만 요약한다 */
 if(_ins.n) setTimeout(()=>toast('수업 '+_ins.names.length+'회분 · '+_ins.n+'단어를 등록했습니다.'),400);
 
@@ -2249,25 +2458,34 @@ function pickModel(list){
   const by=re=>(list.find(m=>re.test(m.id))||{}).id;
   return by(/sonnet/i)||by(/haiku/i)||by(/opus/i)||(list[0]||{}).id||'';
 }
-async function aiRecognize(dataUrl){
-  const m=/^data:(image\/[a-zA-Z+]+);base64,([\s\S]*)$/.exec(dataUrl||'');
-  if(!m) throw new Error('사진을 읽지 못했습니다.');
+/* 사진·PDF·텍스트를 가리지 않고 쓰는 공통 호출부.
+   blocks 는 Claude 메시지의 content 블록 배열, prompt 는 마지막에 붙는 지시문. */
+async function aiJson(blocks, prompt){
   let r;
   try{
     r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:aiHeaders(),
-      body:JSON.stringify({model:AI.model,max_tokens:8000,messages:[{role:'user',content:[
-        {type:'image',source:{type:'base64',media_type:m[1],data:m[2]}},
-        {type:'text',text:VISION_PROMPT}]}]})});
+      body:JSON.stringify({model:AI.model,max_tokens:8000,
+        messages:[{role:'user',content:blocks.concat([{type:'text',text:prompt}])}]})});
   }catch(e){ throw new Error('인터넷에 연결되지 않았습니다.'); }
   const j=await r.json().catch(()=>null);
   if(!r.ok) throw new Error(aiErr(r.status,j));
   const txt=(((j&&j.content)||[]).filter(c=>c.type==='text').map(c=>c.text).join('')||'').trim();
-  let arr=null;
-  try{ arr=JSON.parse(stripFence(txt)); }
+  let out=null;
+  try{ out=JSON.parse(stripFence(txt)); }
   catch(e){
-    const mm=txt.match(/\[[\s\S]*\]/);        /* 설명이 섞여 나온 경우 배열만 건져낸다 */
-    if(mm){ try{ arr=JSON.parse(mm[0]); }catch(e2){} }
+    const mm=txt.match(/[\[{][\s\S]*[\]}]/);   /* 설명이 섞여 나온 경우 JSON만 건져낸다 */
+    if(mm){ try{ out=JSON.parse(mm[0]); }catch(e2){} }
   }
+  if(out==null||typeof out!=='object') throw new Error('결과를 이해하지 못했습니다. 다시 시도해 주세요.');
+  return out;
+}
+function imgBlock(dataUrl){
+  const m=/^data:(image\/[a-zA-Z+]+);base64,([\s\S]*)$/.exec(dataUrl||'');
+  if(!m) throw new Error('사진을 읽지 못했습니다.');
+  return {type:'image',source:{type:'base64',media_type:m[1],data:m[2]}};
+}
+async function aiRecognize(dataUrl){
+  const arr=await aiJson([imgBlock(dataUrl)], VISION_PROMPT);
   if(!Array.isArray(arr)) throw new Error('결과를 이해하지 못했습니다. 다시 시도해 주세요.');
   return arr;
 }
@@ -2513,6 +2731,398 @@ window.addEventListener('online',()=>{ renderShots(); runQueue(); });
 window.addEventListener('offline',renderShots);
 setTimeout(runQueue,1200);   /* 첫 화면이 다 그려진 뒤에 시작한다 */
 
+/* ===================== 문장 읽기 (음독) — v2.4 =====================
+
+   설계 메모
+
+   1) 지문은 S(=jvocab.v1)에 넣는다. 사진·API 키와 반대다.
+      읽은 횟수는 사용자가 시간을 들여 쌓은 기록이라 **백업에 반드시 실려야** 한다.
+      용량도 텍스트뿐이라 사진처럼 저장소를 터뜨릴 위험이 없다.
+
+   2) 100회의 단위는 지문 한 편이다. 카운터가 하나라 진도가 한눈에 보인다.
+
+   3) 「읽음」 옆에 반드시 「취소」를 둔다.
+      주머니 속에서 잘못 눌리거나 두 번 눌리는 일이 실제로 생기는데,
+      되돌릴 수 없으면 기록 전체를 믿지 못하게 된다.
+
+   4) 날짜별 기록(hist)을 남긴다. "오늘 몇 번 읽었나"가 반복 훈련의 실제 동기다. */
+
+function tkey(t){ return (t.title||'').trim()+'|'+(t.date||''); }
+function normText(o){
+  o=o||{};
+  const lines=(Array.isArray(o.lines)?o.lines:String(o.lines||'').split('\n'))
+              .map(s=>String(s||'').trim()).filter(Boolean);
+  return {id:o.id||uid(), title:String(o.title||'').trim()||'제목 없음', date:o.date||todayStr(),
+          lines:lines, target:Math.max(1,parseInt(o.target,10)||100),
+          count:Math.max(0,parseInt(o.count,10)||0), hist:(o.hist&&typeof o.hist==='object')?o.hist:{},
+          ts:o.ts||Date.now()};
+}
+function addTexts(arr){
+  const have=new Set(S.texts.map(tkey)); let n=0, dup=0;
+  arr.forEach(o=>{
+    const t=normText(o);
+    if(!t.lines.length) return;
+    if(have.has(tkey(t))){ dup++; return; }
+    have.add(tkey(t)); S.texts.push(t); n++;
+  });
+  if(n){ save(); renderTexts(); }
+  toast(n? (n+'편을 추가했습니다'+(dup?' · 중복 '+dup+'편 제외':'')+'.')
+         : (dup?'이미 등록된 지문입니다.':'추가할 지문을 찾지 못했습니다.'));
+  return n;
+}
+
+/* ---------- 첫 화면 ---------- */
+function renderPick(){
+  const w=S.words.length, t=S.texts.length;
+  const reads=S.texts.reduce((a,x)=>a+(x.count||0),0);
+  $('#pickWordMeta').textContent = w? (w+'개 단어 · 카드와 퀴즈') : '단어 카드와 퀴즈';
+  $('#pickSentMeta').textContent = t? (t+'편 · 누적 '+reads+'회 읽음') : '지문을 소리 내어 반복';
+}
+
+/* ---------- 지문 목록 (월별 → 지문) ---------- */
+function renderTexts(){
+  const box=$('#textList'); if(!box) return;
+  const today=todayStr();
+  const reads=S.texts.reduce((a,x)=>a+(x.count||0),0);
+  const todayN=S.texts.reduce((a,x)=>a+((x.hist&&x.hist[today])||0),0);
+  $('#stTexts').textContent=S.texts.length;
+  $('#stReads').textContent=reads;
+  $('#stToday').textContent=todayN;
+
+  if(!S.texts.length){
+    box.innerHTML='<div class="empty"><div class="big">📖</div>아직 지문이 없습니다.<br>'+
+      '아래 <b>＋ 추가</b>에서 사진을 찍거나 PDF·워드 파일을 올려 보세요.</div>';
+    return;
+  }
+  /* 날짜 내림차순 → 월별로 묶는다 (단어장 홈과 같은 규칙) */
+  const byMonth={};
+  S.texts.slice().sort((a,b)=>(b.date+b.ts).localeCompare?(b.date>a.date?1:b.date<a.date?-1:b.ts-a.ts):0)
+    .forEach(t=>{ const m=(t.date||'').slice(0,7); (byMonth[m]=byMonth[m]||[]).push(t); });
+  const months=Object.keys(byMonth).sort().reverse();
+  box.innerHTML=months.map(m=>{
+    const list=byMonth[m];
+    const done=list.filter(t=>t.count>=t.target).length;
+    const [y,mm]=m.split('-');
+    return '<div class="datehead">'+esc(y)+'년 '+esc(String(parseInt(mm,10)))+'월 '+
+           '<span class="n">'+list.length+'편'+(done?' · 완료 '+done:'')+'</span></div>'+
+      list.map(t=>{
+        const pct=Math.min(100,Math.round((t.count/t.target)*100));
+        const fin=t.count>=t.target;
+        return '<button class="textcard" data-tid="'+t.id+'">'+
+          '<div class="tt">'+ruby(t.title)+(fin?' ✅':'')+'</div>'+
+          '<div class="tm"><span>'+esc(t.date)+'</span><span>·</span><span>'+t.lines.length+'문장</span>'+
+            '<span class="grow"></span><span class="cnt">'+t.count+'</span><span>&nbsp;/ '+t.target+'회</span></div>'+
+          '<div class="prog'+(fin?' done':'')+'"><i style="width:'+pct+'%"></i></div></button>';
+      }).join('');
+  }).join('');
+  box.querySelectorAll('[data-tid]').forEach(b=>b.onclick=()=>openRead(b.dataset.tid));
+}
+
+/* ---------- 음독 화면 ---------- */
+function openRead(id){
+  const t=S.texts.find(x=>x.id===id); if(!t) return;
+  curText=t; go('read'); renderRead();
+}
+function renderRead(){
+  const t=curText; if(!t) return;
+  const pct=Math.min(100,Math.round((t.count/t.target)*100));
+  $('#rdTitle').textContent=stripRuby(t.title);   /* 상단 바는 한 줄이라 루비를 올릴 자리가 없다 */
+  $('#rdMeta').textContent=t.date+' · '+t.lines.length+'문장';
+  $('#rdNow').textContent=t.count;
+  $('#rdOf').textContent='/ '+t.target+'회';
+  $('#rdBar').style.width=pct+'%';
+  const today=(t.hist&&t.hist[todayStr()])||0;
+  $('#rdToday').textContent = t.count>=t.target
+    ? ('🎉 목표를 채웠습니다'+(today?' · 오늘 '+today+'회':''))
+    : (today? '오늘 '+today+'회 · '+(t.target-t.count)+'회 남음' : (t.target-t.count)+'회 남음');
+  $('#rdUndo').style.visibility = t.count? 'visible':'hidden';
+  $('#rdLines').innerHTML=t.lines.map((l,i)=>
+    '<button class="sline" data-i="'+i+'">'+ruby(l)+'</button>').join('');
+  $('#rdLines').querySelectorAll('.sline').forEach(b=>b.onclick=()=>playOne(+b.dataset.i));
+}
+function hlLine(i){
+  $$('#rdLines .sline').forEach((el,k)=>el.classList.toggle('on',k===i));
+}
+function stopRead(){
+  rdToken++;
+  if(window.speechSynthesis) speechSynthesis.cancel();
+  if(typeof markBusy==='function') markBusy(false);
+  hlLine(-1);
+}
+function playOne(i){
+  const t=curText; if(!t||!t.lines[i]) return;
+  stopRead();
+  const my=rdToken;
+  hlLine(i);
+  speak(t.lines[i], ()=>{ if(my===rdToken) hlLine(-1); });
+}
+function playAll(){
+  const t=curText; if(!t||!t.lines.length) return;
+  stopRead();
+  const my=rdToken, lines=t.lines.slice();
+  let i=0;
+  const step=()=>{
+    if(my!==rdToken) return;              /* 멈췄거나 다른 재생이 시작됨 */
+    if(i>=lines.length){ hlLine(-1); return; }
+    const k=i++;
+    hlLine(k);
+    speak(lines[k], ()=>{ if(my===rdToken) setTimeout(step,220); });
+  };
+  step();
+}
+function readPlus(){
+  const t=curText; if(!t) return;
+  t.count=(t.count||0)+1;
+  const d=todayStr(); t.hist=t.hist||{}; t.hist[d]=(t.hist[d]||0)+1;
+  save(); renderRead();
+  if(t.count===t.target) toast('🎉 '+stripRuby(t.title)+' · 목표 '+t.target+'회를 채웠습니다!',null,5000);
+}
+function readMinus(){
+  const t=curText; if(!t||!t.count) return;
+  t.count--;
+  const d=todayStr();
+  if(t.hist&&t.hist[d]){ t.hist[d]--; if(!t.hist[d]) delete t.hist[d]; }
+  save(); renderRead();
+}
+$('#rdBack').onclick=()=>{ stopRead(); go('sent'); };
+$('#rdPlayAll').onclick=playAll;
+$('#rdStop').onclick=stopRead;
+$('#rdDone').onclick=readPlus;
+$('#rdUndo').onclick=readMinus;
+$('#rdEdit').onclick=()=>{
+  const t=curText; if(!t) return;
+  const v=prompt('목표 횟수 (지금 '+t.count+'회 읽음)', t.target);
+  if(v===null) return;
+  const n=parseInt(v,10);
+  if(!n||n<1||n>9999){ toast('1~9999 사이로 넣어 주세요.'); return; }
+  t.target=n; save(); renderRead();
+};
+
+/* ===================== 지문 입력 ===================== */
+
+const TEXT_PROMPT = [
+'첨부한 자료에서 일본어 지문(소리 내어 읽는 연습용 본문)을 뽑아 아래 JSON 형식으로 정리해 줘.',
+'',
+'규칙',
+'- 자료에 "제목:" 또는 「タイトル:」 표기가 있으면 그 값을 title 로 쓸 것',
+'- 제목 표기가 없으면 본문에 어울리는 짧은 일본어 제목을 만들어 title 로 쓸 것',
+'- 본문을 문장 단위로 나눠 lines 배열에 담을 것 (。！？ 기준. 「」 대화문은 통째로 한 줄)',
+'- 모든 한자에 반드시 후리가나를 한자[히라가나] 형식으로 달 것',
+'- 후리가나는 그 문맥에서 실제로 읽는 법으로 달 것 (今日→きょう, 一日→ 문맥에 따라 いちにち/ついたち)',
+'- 숙어나 익은 표현은 통째로 묶어도 된다 (大人[おとな], 昨日[きのう], 一日[いちにち])',
+'- 자료에 날짜가 있으면 date 에 YYYY-MM-DD 로, 없으면 생략',
+'- 원문에 없는 문장을 지어내지 말 것. 읽을 수 없는 부분은 뺄 것',
+'- 문제 번호, 쪽번호, 머리말 같은 본문이 아닌 것은 제외할 것',
+'- 설명 없이 JSON만 출력할 것',
+'',
+'{"title":"私[わたし]の一日[いちにち]","date":"2026-09-04",',
+' "lines":["毎朝[まいあさ]六時[ろくじ]に 起[お]きます。",',
+'          "朝[あさ]ごはんを 食[た]べてから 学校[がっこう]へ 行[い]きます。"]}'
+].join('\n');
+
+const FURI_PROMPT = [
+'아래 일본어 문장에 후리가나를 달아 줘.',
+'',
+'규칙',
+'- 모든 한자에 한자[히라가나] 형식으로 달 것 (今日[きょう]は 天気[てんき]が いいです。)',
+'- 그 문맥에서 실제로 읽는 법으로 달 것',
+'- 문장을 고치거나 새로 만들지 말 것. 후리가나만 달 것',
+'- 입력의 줄 수와 순서를 그대로 유지할 것',
+'- 설명 없이 {"lines":[...]} 형식의 JSON만 출력할 것'
+].join('\n');
+
+/* 워드(.docx)는 zip 안의 word/document.xml 이다.
+   라이브러리 없이 브라우저 기본 기능(DecompressionStream)만으로 꺼낸다. */
+async function docxText(file){
+  if(!window.DecompressionStream)
+    throw new Error('이 브라우저에서는 워드 파일을 직접 읽지 못합니다. 내용을 복사해 «직접» 탭에 붙여넣어 주세요.');
+  const buf=new Uint8Array(await file.arrayBuffer());
+  const dv=new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  const dec=new TextDecoder();
+  let xml=null;
+  for(let i=0;i+30<buf.length;i++){
+    if(dv.getUint32(i,true)!==0x04034b50) continue;       /* PK\x03\x04 */
+    const method=dv.getUint16(i+8,true);
+    let csize=dv.getUint32(i+18,true);
+    const nlen=dv.getUint16(i+26,true), elen=dv.getUint16(i+28,true);
+    const name=dec.decode(buf.subarray(i+30,i+30+nlen));
+    const start=i+30+nlen+elen;
+    if(name!=='word/document.xml') continue;
+    if(!csize){                                            /* 크기가 뒤에 붙는 형식 */
+      let e=start;
+      while(e+4<buf.length && dv.getUint32(e,true)!==0x08074b50 && dv.getUint32(e,true)!==0x04034b50
+            && dv.getUint32(e,true)!==0x02014b50) e++;
+      csize=e-start;
+    }
+    const raw=buf.subarray(start,start+csize);
+    let out;
+    if(method===0) out=raw;
+    else if(method===8){
+      const ds=new DecompressionStream('deflate-raw');
+      const ab=await new Response(new Blob([raw]).stream().pipeThrough(ds)).arrayBuffer();
+      out=new Uint8Array(ab);
+    } else throw new Error('지원하지 않는 압축 방식의 워드 파일입니다.');
+    xml=new TextDecoder('utf-8').decode(out);
+    break;
+  }
+  if(!xml) throw new Error('워드 파일에서 본문을 찾지 못했습니다.');
+  const txt=xml.replace(/<w:br[^>]*\/?>/g,'\n')
+               .replace(/<\/w:p>/g,'\n')
+               .replace(/<[^>]+>/g,'')
+               /* 워드는 한글·일본어를 숫자 참조(&#51228;)로 저장하기도 한다. 풀지 않으면 그대로 깨져 보인다 */
+               .replace(/&#x([0-9a-fA-F]+);/g,(_,h)=>String.fromCodePoint(parseInt(h,16)))
+               .replace(/&#(\d+);/g,(_,d)=>String.fromCodePoint(parseInt(d,10)))
+               .replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+               .replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,'&')
+               .replace(/\n{3,}/g,'\n\n').trim();
+  if(!txt) throw new Error('워드 파일의 본문이 비어 있습니다.');
+  return txt;
+}
+
+/* 파일 하나를 Claude 메시지 블록으로 바꾼다 */
+async function fileBlocks(file){
+  const name=(file.name||'').toLowerCase();
+  if(/^image\//.test(file.type||'')){
+    const img=await new Promise(res=>prepImage(file,res));
+    if(!img) throw new Error('사진을 읽지 못했습니다.');
+    return [imgBlock(img)];
+  }
+  if(/\.pdf$/.test(name)||file.type==='application/pdf'){
+    const b64=await new Promise((res,rej)=>{
+      const r=new FileReader();
+      r.onload=e=>res(String(e.target.result).split(',')[1]||'');
+      r.onerror=()=>rej(new Error('파일을 읽지 못했습니다.'));
+      r.readAsDataURL(file);
+    });
+    return [{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}}];
+  }
+  if(/\.docx$/.test(name)) return [{type:'text',text:await docxText(file)}];
+  if(/\.(doc|hwp|pages)$/.test(name))
+    throw new Error('이 형식은 직접 읽지 못합니다. .docx나 PDF로 저장하거나, 내용을 «직접» 탭에 붙여넣어 주세요.');
+  const t=await new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>res(String(e.target.result||''));
+    r.onerror=()=>rej(new Error('파일을 읽지 못했습니다.'));
+    r.readAsText(file,'utf-8');
+  });
+  if(!t.trim()) throw new Error('파일이 비어 있습니다.');
+  return [{type:'text',text:t}];
+}
+
+let sentBusy=false;
+function sentSay(msg,cls){
+  const el=$('#sentHint'); if(!el) return;
+  el.innerHTML=msg||''; el.style.display=msg?'':'none';
+}
+async function sentFromFile(file){
+  if(sentBusy) return;
+  if(!AI.key||!AI.model){
+    sentSay('설정 → <b>사진 인식 (AI)</b>에서 API 키를 먼저 넣어 주세요. 사진·문서에서 지문을 뽑는 데 필요합니다.');
+    return;
+  }
+  sentBusy=true;
+  sentSay('<span class="spin" style="display:inline-block;vertical-align:-2px"></span> 읽는 중…');
+  try{
+    const blocks=await fileBlocks(file);
+    const o=await aiJson(blocks, TEXT_PROMPT);
+    const t=normText({title:o.title, date:o.date||$('#sentDate').value||todayStr(),
+                      lines:o.lines, target:$('#sentTarget').value});
+    if(!t.lines.length) throw new Error('읽을 수 있는 문장을 찾지 못했습니다. 글자가 크고 밝게 나오도록 다시 찍어 보세요.');
+    sentSay('');
+    openTextSheet(t);
+  }catch(e){
+    sentSay('<b>실패</b> · '+esc((e&&e.message)||'처리하지 못했습니다.'));
+  }
+  sentBusy=false;
+}
+
+/* ---------- 확인 시트 ---------- */
+let txDraft=null;
+function openTextSheet(t){
+  txDraft=t;
+  $('#txTitle').value=t.title;
+  $('#txDate').value=t.date;
+  $('#txTarget').value=t.target;
+  $('#txBody').value=t.lines.join('\n');
+  renderTxPrev();
+  $('#textSheet').classList.add('on');
+}
+function renderTxPrev(){
+  const lines=$('#txBody').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  $('#txPrev').innerHTML = lines.length
+    ? lines.map(l=>'<div style="margin-bottom:6px">'+ruby(l)+'</div>').join('')
+    : '<span class="muted">본문이 비어 있습니다.</span>';
+}
+$('#txBody').oninput=renderTxPrev;
+$('#txCancel').onclick=()=>{ $('#textSheet').classList.remove('on'); txDraft=null; };
+$('#txAdd').onclick=()=>{
+  const lines=$('#txBody').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!lines.length){ toast('본문을 채워 주세요.'); return; }
+  const n=addTexts([{title:$('#txTitle').value.trim()||'제목 없음',
+                     date:$('#txDate').value||todayStr(),
+                     target:$('#txTarget').value, lines:lines}]);
+  $('#textSheet').classList.remove('on'); txDraft=null;
+  if(n){ $('#stBody').value=''; $('#stTitle').value=''; MODE='sent'; go('sent'); }
+};
+
+/* ---------- 추가 화면 배선 ---------- */
+$$('#sentMode button').forEach(b=>b.onclick=()=>{
+  $$('#sentMode button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  $('#sentCam').style.display =b.dataset.m==='scam'?'':'none';
+  $('#sentFile').style.display=b.dataset.m==='sfile'?'':'none';
+  $('#sentType').style.display=b.dataset.m==='stype'?'':'none';
+  $('#btnSentAdd').style.display=b.dataset.m==='stype'?'':'none';
+  sentSay('');
+});
+$('#btnSentShoot').onclick=()=>$('#sentCamInput').click();
+$('#btnSentPick').onclick=()=>$('#sentPickInput').click();
+['#sentCamInput','#sentPickInput','#sentFileInput'].forEach(sel=>{
+  $(sel).onchange=e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=''; if(f) sentFromFile(f); };
+});
+/* 「제목: OOO」이 본문 첫머리에 있으면 제목으로 올린다 */
+function splitTitle(body){
+  const lines=body.split('\n').map(s=>s.trim());
+  for(let i=0;i<Math.min(3,lines.length);i++){
+    const m=/^(?:제목|題名|タイトル|title)\s*[:：]\s*(.+)$/i.exec(lines[i]);
+    if(m){ lines.splice(i,1); return {title:m[1].trim(), body:lines.filter(Boolean).join('\n')}; }
+  }
+  return {title:'', body:lines.filter(Boolean).join('\n')};
+}
+$('#btnSentAdd').onclick=()=>{
+  const raw=$('#stBody').value.trim();
+  if(!raw){ toast('본문을 입력해 주세요.'); return; }
+  const s=splitTitle(raw);
+  openTextSheet(normText({title:$('#stTitle').value.trim()||s.title,
+                          date:$('#sentDate').value||todayStr(),
+                          target:$('#sentTarget').value,
+                          lines:s.body.split('\n')}));
+};
+$('#btnFuri').onclick=async ()=>{
+  const raw=$('#stBody').value.trim();
+  if(!raw){ toast('먼저 본문을 입력해 주세요.'); return; }
+  if(!AI.key||!AI.model){ sentSay('설정 → <b>사진 인식 (AI)</b>에서 API 키를 먼저 넣어 주세요.'); return; }
+  if(sentBusy) return;
+  sentBusy=true;
+  sentSay('<span class="spin" style="display:inline-block;vertical-align:-2px"></span> 후리가나를 다는 중…');
+  try{
+    const s=splitTitle(raw);
+    if(s.title && !$('#stTitle').value.trim()) $('#stTitle').value=s.title;
+    const o=await aiJson([{type:'text',text:s.body}], FURI_PROMPT);
+    const lines=(o.lines||[]).map(x=>String(x||'').trim()).filter(Boolean);
+    if(!lines.length) throw new Error('결과가 비어 있습니다.');
+    $('#stBody').value=lines.join('\n');
+    sentSay('후리가나를 달았습니다. 확인하고 <b>지문 추가</b>를 눌러 주세요.');
+  }catch(e){
+    sentSay('<b>실패</b> · '+esc((e&&e.message)||'처리하지 못했습니다.'));
+  }
+  sentBusy=false;
+};
+function renderSentAdd(){
+  const d=$('#sentDate'); if(d && !d.value) d.value=todayStr();
+  const t=$('#sentTarget'); if(t && !t.value) t.value=S.settings.readTarget||100;
+  if(!AI.key) sentSay('사진·문서에서 지문을 뽑으려면 설정에서 API 키가 필요합니다. <b>✍️ 직접</b> 탭은 키 없이도 쓸 수 있습니다.');
+}
+
 /* ===================== 엔소 시작 애니메이션 ===================== */
 (function(){
   const sp=document.getElementById('splash'); if(!sp) return;
@@ -2627,4 +3237,4 @@ document.addEventListener('keydown',e=>{
 </script>
 </body>
 </html>
-<!-- 일본어 단어장 v2.3 (PWA) · 2026-09-03 -->
+<!-- 일본어 단어장 v2.4 (PWA) · 2026-09-04 -->

@@ -242,6 +242,20 @@
   .sline:active{transform:scale(.995)}
   .rdprev{font-family:var(--jp);font-size:15px;line-height:2;max-height:180px;overflow:auto}
   .rdprev ruby rt{font-size:10px;color:var(--sub)}
+
+  /* ---------- 선택해서 삭제 (v2.5) ---------- */
+  .selbar{position:sticky;bottom:0;display:flex;align-items:center;gap:8px;
+          padding:11px 12px calc(11px + env(safe-area-inset-bottom));
+          background:var(--panel);border-top:1px solid var(--line);z-index:40}
+  .chk{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);flex:none;
+       display:grid;place-items:center;font-size:12px;font-weight:800;color:transparent}
+  .chk.on{background:var(--ink);border-color:var(--ink);color:var(--accent-ink)}
+  .witem.sel{background:var(--soft)}
+  .textcard.sel{outline:2px solid var(--ink);outline-offset:-2px}
+  .datehead.dsel{cursor:pointer}
+  .datehead.dsel .n{color:var(--ink);font-weight:800}
+  .btn.danger{background:#b91c1c;color:#fff}
+  .btn.danger[disabled]{opacity:.4}
 </style>
 </head>
 <body>
@@ -301,7 +315,9 @@
   <!-- ================= 단어장 목록 ================= -->
   <section id="listScreen" class="screen">
     <div class="topbar">
+      <button class="iconbtn" onclick="go('pick')" title="처음 화면">⌂</button>
       <h1>단어 목록</h1>
+      <button class="iconbtn" id="btnListSel" title="선택해서 삭제">☑</button>
       <button class="iconbtn" id="btnStudyFiltered" title="이 목록 학습">▶</button>
     </div>
     <div class="body">
@@ -526,6 +542,7 @@
       <button class="iconbtn" onclick="go('pick')" title="처음 화면">⌂</button>
       <span class="brandmark"><svg viewBox="0 0 512 512"><use href="#ensoShape" fill="currentColor"/></svg></span>
       <h1>문장 읽기</h1>
+      <button class="iconbtn" id="btnSentSel" title="선택해서 삭제">☑</button>
       <button class="iconbtn" onclick="go('settings')" title="설정">⚙</button>
     </div>
     <div class="body">
@@ -567,6 +584,15 @@
       <button class="ansbtn learn" id="rdDone">✓ 읽음</button>
     </div>
   </section>
+
+  <!-- 선택해서 삭제할 때 하단 탭 대신 뜬다 -->
+  <div class="selbar" id="selBar" style="display:none">
+    <span class="pill" id="selCount">0개 선택</span>
+    <button class="btn sm" id="selAll">전체 선택</button>
+    <div class="grow"></div>
+    <button class="btn sm" id="selCancel">취소</button>
+    <button class="btn sm danger" id="selDel">삭제</button>
+  </div>
 
   <!-- ================= 하단 탭 ================= -->
   <nav class="tabbar" id="tabbar">
@@ -628,6 +654,16 @@
 </div>
 
 <!-- 단어 상세/편집 시트 -->
+<!-- 음독 화면의 ⋯ 시트 -->
+<div class="sheet" id="rdSheet"><div class="inner">
+  <h3 id="rdsTitle">지문 설정</h3>
+  <div class="field"><label>목표 횟수</label><input type="number" id="rdsTarget" min="1" max="9999"></div>
+  <div class="hint" id="rdsInfo" style="margin-bottom:12px"></div>
+  <button class="btn primary block" id="rdsSave">저장</button>
+  <button class="btn block" style="margin-top:8px;color:#b91c1c" id="rdsDel">이 지문 삭제</button>
+  <button class="btn block" style="margin-top:8px" id="rdsCancel">닫기</button>
+</div></div>
+
 <!-- 지문 확인 시트 -->
 <div class="sheet" id="textSheet"><div class="inner">
   <h3>지문 확인</h3>
@@ -666,7 +702,7 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v2.4';
+const APP_VER='v2.5';
 const APP_DATE='2026-09-04';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
@@ -749,9 +785,13 @@ function speak(text,cb){
 /* ===================== 화면 전환 ===================== */
 /* 모드: 'word' 단어장 / 'sent' 문장 읽기. 첫 화면에서 고른다 */
 let MODE='word';
-/* 음독 상태 — go()가 화면을 옮길 때 stopRead()를 부르므로 반드시 go()보다 먼저 선언한다.
-   아래쪽에 두면 초기화 전 접근(TDZ)으로 앱 시작이 통째로 멈춘다 (v2.4 개발 중 실제로 겪음) */
+/* ⚠ 아래 세 줄은 반드시 go()·renderList()·renderTexts() 보다 먼저 있어야 한다.
+   이들이 화면을 그릴 때 이 값을 읽는데, 선언이 뒤에 있으면 초기화 전 접근(TDZ)으로
+   앱 시작이 통째로 멈춘다 (v2.4의 rdToken, v2.5의 selMode에서 실제로 겪음).
+   `typeof x` 로 감싸는 것은 방어가 되지 않는다 — TDZ에서는 typeof 자체가 던진다. */
 let curText=null, rdToken=0;
+let selMode=false;
+const selSet=new Set();
 function syncTabs(){
   $$('#tabbar button').forEach(b=>{
     const only=b.dataset.mode;
@@ -766,6 +806,11 @@ function pick(m){
 function go(name){
   if(name==='startStudy'){ openStart(); return; }
   if(typeof stopRead==='function' && name!=='read') stopRead();
+  /* 다른 화면으로 가면 선택 상태를 남기지 않는다 — 무엇이 골라져 있는지 안 보이는 채로 남으면 위험하다 */
+  if(selMode){
+    selMode=false; selSet.clear();
+    const sb=$('#selBar'); if(sb) sb.style.display='none';
+  }
   $$('.screen').forEach(s=>s.classList.remove('on'));
   const map={pick:'#pickScreen',home:'#homeScreen',list:'#listScreen',add:'#addScreen',
              study:'#studyScreen',quiz:'#quizScreen',settings:'#settingsScreen',
@@ -883,13 +928,28 @@ function renderList(){
   const arr=filteredWords(), box=$('#wordList');
   if(!arr.length){box.innerHTML='<div class="empty">해당하는 단어가 없습니다.</div>';return;}
   const g={}; arr.forEach(w=>{(g[w.date]=g[w.date]||[]).push(w);});
+  const sel=selMode;
   box.innerHTML=Object.keys(g).sort().reverse().map(d=>
-    '<div class="datehead">'+d.replace(/-/g,'.')+' <span class="n">'+g[d].length+'개</span></div><div class="wlist">'+
-    g[d].map(w=>'<div class="witem" data-id="'+w.id+'">'+
-      '<div class="grow"><div class="jp">'+(w.fav?'<span style="color:#f59e0b">★</span> ':'')+esc(w.word)+'</div><div class="rd">'+esc(w.read)+' · '+esc(w.mean)+'</div></div>'+
-      '<span class="badge '+(w.status==='learn'?'learn':w.status==='known'?'known':'')+'">'+
-        (w.status==='learn'?'학습':w.status==='known'?'앎':'미분류')+'</span></div>').join('')+'</div>').join('');
-  $$('#wordList .witem').forEach(el=>el.onclick=()=>openEdit(el.dataset.id));
+    '<div class="datehead'+(sel?' dsel" data-dsel="'+d+'':'')+'">'+d.replace(/-/g,'.')+
+      ' <span class="n">'+g[d].length+'개'+(sel?' · 이 날짜 전체':'')+'</span></div><div class="wlist">'+
+    g[d].map(w=>{
+      const on=sel&&selSet.has(w.id);
+      return '<div class="witem'+(on?' sel':'')+'" data-id="'+w.id+'">'+
+        (sel?'<span class="chk'+(on?' on':'')+'">✓</span>':'')+
+        '<div class="grow"><div class="jp">'+(w.fav?'<span style="color:#f59e0b">★</span> ':'')+esc(w.word)+'</div><div class="rd">'+esc(w.read)+' · '+esc(w.mean)+'</div></div>'+
+        '<span class="badge '+(w.status==='learn'?'learn':w.status==='known'?'known':'')+'">'+
+          (w.status==='learn'?'학습':w.status==='known'?'앎':'미분류')+'</span></div>';
+    }).join('')+'</div>').join('');
+  $$('#wordList .witem').forEach(el=>el.onclick=()=>{
+    if(sel){ selToggle(el.dataset.id, el); return; }
+    openEdit(el.dataset.id);
+  });
+  if(sel) $$('#wordList [data-dsel]').forEach(h=>h.onclick=()=>{
+    const ids=(g[h.dataset.dsel]||[]).map(w=>w.id);
+    const allOn=ids.every(i=>selSet.has(i));
+    ids.forEach(i=>allOn?selSet.delete(i):selSet.add(i));
+    selApply(); renderList();
+  });
 }
 
 /* ===================== 단어 파싱/추가 ===================== */
@@ -1082,7 +1142,7 @@ function openEdit(id){
   $$('#eS button').forEach(b=>b.onclick=()=>{$$('#eS button').forEach(x=>x.classList.remove('on'));b.classList.add('on');st=b.dataset.v;});
   $('#eFav').onclick=()=>{ w.fav=!w.fav; save(); $('#eFav').textContent=w.fav?'★ 즐겨찾기 해제':'☆ 즐겨찾기에 추가'; renderList(); };
   $('#eCancel').onclick=()=>$('#editSheet').classList.remove('on');
-  $('#eDel').onclick=()=>{ if(confirm('이 단어를 삭제할까요?')){ S.words=S.words.filter(x=>x.id!==id); save(); $('#editSheet').classList.remove('on'); renderList(); renderHome(); } };
+  $('#eDel').onclick=()=>{ $('#editSheet').classList.remove('on'); delWords([id]); };
   $('#eSave').onclick=()=>{
     Object.assign(w,{word:$('#eW').value.trim(),read:$('#eR').value.trim(),mean:$('#eM').value.trim(),
       ex:$('#eE').value.trim(),exKo:$('#eK').value.trim(),tip:$('#eT').value.trim(),date:$('#eD').value||w.date,status:st});
@@ -2782,6 +2842,7 @@ function renderPick(){
 /* ---------- 지문 목록 (월별 → 지문) ---------- */
 function renderTexts(){
   const box=$('#textList'); if(!box) return;
+  const sel=selMode;
   const today=todayStr();
   const reads=S.texts.reduce((a,x)=>a+(x.count||0),0);
   const todayN=S.texts.reduce((a,x)=>a+((x.hist&&x.hist[today])||0),0);
@@ -2789,6 +2850,7 @@ function renderTexts(){
   $('#stReads').textContent=reads;
   $('#stToday').textContent=todayN;
 
+  { const b=$('#btnSentSel'); if(b) b.style.display=S.texts.length?'':'none'; }
   if(!S.texts.length){
     box.innerHTML='<div class="empty"><div class="big">📖</div>아직 지문이 없습니다.<br>'+
       '아래 <b>＋ 추가</b>에서 사진을 찍거나 PDF·워드 파일을 올려 보세요.</div>';
@@ -2808,14 +2870,22 @@ function renderTexts(){
       list.map(t=>{
         const pct=Math.min(100,Math.round((t.count/t.target)*100));
         const fin=t.count>=t.target;
-        return '<button class="textcard" data-tid="'+t.id+'">'+
-          '<div class="tt">'+ruby(t.title)+(fin?' ✅':'')+'</div>'+
-          '<div class="tm"><span>'+esc(t.date)+'</span><span>·</span><span>'+t.lines.length+'문장</span>'+
-            '<span class="grow"></span><span class="cnt">'+t.count+'</span><span>&nbsp;/ '+t.target+'회</span></div>'+
-          '<div class="prog'+(fin?' done':'')+'"><i style="width:'+pct+'%"></i></div></button>';
+        const on=sel&&selSet.has(t.id);
+        return '<button class="textcard'+(on?' sel':'')+'" data-tid="'+t.id+'">'+
+          '<div class="row" style="align-items:flex-start;gap:10px">'+
+            (sel?'<span class="chk'+(on?' on':'')+'" style="margin-top:4px">✓</span>':'')+
+            '<div class="grow">'+
+              '<div class="tt">'+ruby(t.title)+(fin?' ✅':'')+'</div>'+
+              '<div class="tm"><span>'+esc(t.date)+'</span><span>·</span><span>'+t.lines.length+'문장</span>'+
+                '<span class="grow"></span><span class="cnt">'+t.count+'</span><span>&nbsp;/ '+t.target+'회</span></div>'+
+              '<div class="prog'+(fin?' done':'')+'"><i style="width:'+pct+'%"></i></div>'+
+            '</div></div></button>';
       }).join('');
   }).join('');
-  box.querySelectorAll('[data-tid]').forEach(b=>b.onclick=()=>openRead(b.dataset.tid));
+  box.querySelectorAll('[data-tid]').forEach(b=>b.onclick=()=>{
+    if(sel){ selToggle(b.dataset.tid, b); return; }
+    openRead(b.dataset.tid);
+  });
 }
 
 /* ---------- 음독 화면 ---------- */
@@ -2891,11 +2961,22 @@ $('#rdDone').onclick=readPlus;
 $('#rdUndo').onclick=readMinus;
 $('#rdEdit').onclick=()=>{
   const t=curText; if(!t) return;
-  const v=prompt('목표 횟수 (지금 '+t.count+'회 읽음)', t.target);
-  if(v===null) return;
-  const n=parseInt(v,10);
+  $('#rdsTitle').textContent=stripRuby(t.title);
+  $('#rdsTarget').value=t.target;
+  $('#rdsInfo').textContent='지금까지 '+t.count+'회 읽었습니다 · '+t.lines.length+'문장 · '+t.date;
+  $('#rdSheet').classList.add('on');
+};
+$('#rdsCancel').onclick=()=>$('#rdSheet').classList.remove('on');
+$('#rdsSave').onclick=()=>{
+  const t=curText; if(!t) return;
+  const n=parseInt($('#rdsTarget').value,10);
   if(!n||n<1||n>9999){ toast('1~9999 사이로 넣어 주세요.'); return; }
-  t.target=n; save(); renderRead();
+  t.target=n; save(); renderRead(); $('#rdSheet').classList.remove('on'); toast('목표를 '+n+'회로 바꿨습니다.');
+};
+$('#rdsDel').onclick=()=>{
+  const t=curText; if(!t) return;
+  $('#rdSheet').classList.remove('on');
+  if(delTexts([t.id])){ curText=null; go('sent'); }
 };
 
 /* ===================== 지문 입력 ===================== */
@@ -3123,6 +3204,119 @@ function renderSentAdd(){
   if(!AI.key) sentSay('사진·문서에서 지문을 뽑으려면 설정에서 API 키가 필요합니다. <b>✍️ 직접</b> 탭은 키 없이도 쓸 수 있습니다.');
 }
 
+/* ===================== 삭제 (v2.5) =====================
+
+   설계 메모
+
+   1) 모든 삭제에 «되돌리기»를 붙인다.
+      확인 대화상자는 실수를 줄이지만 없애지 못한다. 902단어를 쌓고 지문을 100번씩 읽은
+      데이터라서, 한 번의 오조작이 되돌릴 수 없으면 사용자가 삭제 자체를 두려워하게 된다.
+      지운 것을 15초 동안 들고 있다가 토스트를 누르면 되살린다.
+
+   2) 확인창에 «무엇을» 지우는지 숫자로 말한다.
+      지문은 읽은 횟수까지 사라진다는 것을, 내장 수업 단어는 되살릴 방법이 있다는 것을 알린다.
+
+   3) 선택 모드에서는 하단 탭 대신 선택 바를 띄운다.
+      탭을 눌러 다른 화면으로 새면 무엇이 선택돼 있었는지 알 수 없게 된다. */
+
+/* 내장 수업 단어인지 알아두면, 지울 때 "되살릴 수 있다"고 정확히 말할 수 있다 */
+const PACK_KEYS=new Set();
+try{ PACKS.forEach(p=>p.words.forEach(o=>
+  PACK_KEYS.add(stripRuby(o.word||'').trim()+'|'+(o.date||p.date)))); }catch(e){}
+
+function selApply(){
+  $('#selBar').style.display=selMode?'flex':'none';
+  $('#tabbar').style.display=selMode?'none':'flex';
+  if(!selMode) return;
+  $('#selCount').textContent=selSet.size+'개 선택';
+  const d=$('#selDel'); d.disabled=!selSet.size;
+}
+function selRender(){ if(MODE==='sent') renderTexts(); else renderList(); }
+function selSet_mode(on){
+  selMode=on; selSet.clear();
+  selApply(); selRender();
+  window.scrollTo(0,0);
+}
+/* 탭할 때마다 목록 전체를 다시 그리면 902개에서 눈에 띄게 버벅인다. 그 줄만 바꾼다 */
+function selToggle(id, el){
+  const was=selSet.has(id);
+  if(was) selSet.delete(id); else selSet.add(id);
+  if(el){
+    el.classList.toggle('sel', !was);
+    const c=el.querySelector('.chk'); if(c) c.classList.toggle('on', !was);
+  }
+  selApply();
+}
+$('#btnListSel').onclick=()=>selSet_mode(!selMode);
+{ const b=$('#btnSentSel'); if(b) b.onclick=()=>selSet_mode(!selMode); }
+$('#selCancel').onclick=()=>selSet_mode(false);
+$('#selAll').onclick=()=>{
+  const ids = MODE==='sent' ? S.texts.map(t=>t.id) : filteredWords().map(w=>w.id);
+  const allOn = ids.length && ids.every(i=>selSet.has(i));
+  selSet.clear();
+  if(!allOn) ids.forEach(i=>selSet.add(i));
+  selApply(); selRender();
+};
+$('#selDel').onclick=()=>{
+  if(!selSet.size) return;
+  const ids=[...selSet];
+  const n = MODE==='sent' ? delTexts(ids) : delWords(ids);
+  if(n) selSet_mode(false);
+};
+
+/* ---------- 되돌리기 ---------- */
+let undoBag=null;
+function undoDelete(){
+  if(!undoBag) return;
+  const {kind, items}=undoBag;
+  undoBag=null;
+  if(kind==='w') S.words=S.words.concat(items);
+  else           S.texts=S.texts.concat(items);
+  save(); renderAllLists();
+  toast(items.length+(kind==='w'?'개 단어':'편 지문')+'을 되살렸습니다.');
+}
+function renderAllLists(){
+  try{ renderHome(); }catch(e){}
+  try{ renderList(); }catch(e){}
+  try{ renderTexts(); }catch(e){}
+  try{ renderPick(); }catch(e){}
+}
+
+/* ---------- 단어 삭제 ---------- */
+function delWords(ids){
+  const set=new Set(ids);
+  const removed=S.words.filter(w=>set.has(w.id));
+  if(!removed.length) return 0;
+  const packN=removed.filter(w=>PACK_KEYS.has(wkey(w))).length;
+  let msg='단어 '+removed.length+'개를 지울까요?';
+  if(removed.length===1) msg='「'+stripRuby(removed[0].word)+'」을(를) 지울까요?';
+  if(packN) msg+='\n\n이 중 '+packN+'개는 앱에 담긴 수업 단어입니다.\n'+
+                 '설정 → «앱에 담긴 수업 단어 불러오기»로 언제든 다시 넣을 수 있습니다.';
+  if(!confirm(msg)) return 0;
+  S.words=S.words.filter(w=>!set.has(w.id));
+  undoBag={kind:'w', items:removed};
+  save(); renderAllLists();
+  toast(removed.length+'개를 지웠습니다 · 눌러서 되돌리기', undoDelete, 15000);
+  return removed.length;
+}
+
+/* ---------- 지문 삭제 ---------- */
+function delTexts(ids){
+  const set=new Set(ids);
+  const removed=S.texts.filter(t=>set.has(t.id));
+  if(!removed.length) return 0;
+  const reads=removed.reduce((a,t)=>a+(t.count||0),0);
+  let msg='지문 '+removed.length+'편을 지울까요?';
+  if(removed.length===1) msg='「'+stripRuby(removed[0].title)+'」을(를) 지울까요?';
+  if(reads) msg+='\n\n읽은 기록 '+reads+'회도 함께 사라집니다.';
+  if(!confirm(msg)) return 0;
+  S.texts=S.texts.filter(t=>!set.has(t.id));
+  undoBag={kind:'t', items:removed};
+  save(); renderAllLists();
+  toast(removed.length+'편을 지웠습니다 · 눌러서 되돌리기', undoDelete, 15000);
+  return removed.length;
+}
+
 /* ===================== 엔소 시작 애니메이션 ===================== */
 (function(){
   const sp=document.getElementById('splash'); if(!sp) return;
@@ -3237,4 +3431,4 @@ document.addEventListener('keydown',e=>{
 </script>
 </body>
 </html>
-<!-- 일본어 단어장 v2.4 (PWA) · 2026-09-04 -->
+<!-- 일본어 단어장 v2.5 (PWA) · 2026-09-04 -->

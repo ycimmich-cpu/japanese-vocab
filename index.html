@@ -415,17 +415,18 @@
 
         <div id="sentCam">
           <button class="btn primary block cambtn" id="btnSentShoot">📷 사진 찍어 지문 추가</button>
-          <input type="file" id="sentCamInput" accept="image/*" capture="environment" style="display:none">
+          <div class="hint" style="margin:10px 0 0">두 쪽 이상인 지문은 <b>여러 장을 한 번에</b> 고르시면 순서대로 이어 붙여 <b>한 편</b>으로 만듭니다.</div>
+          <input type="file" id="sentCamInput" accept="image/*" capture="environment" multiple style="display:none">
           <button class="btn block sm" id="btnSentPick" style="margin-top:8px">앨범에서 고르기</button>
-          <input type="file" id="sentPickInput" accept="image/*" style="display:none">
+          <input type="file" id="sentPickInput" accept="image/*" multiple style="display:none">
         </div>
 
         <div id="sentFile" style="display:none">
           <div class="hint">
-            <b>PDF · 워드(.docx) · 텍스트</b> 파일에서 지문을 읽어옵니다.<br>
+            <b>PDF · 워드(.docx) · 텍스트</b> 파일에서 지문을 읽어옵니다. <b>여러 개를 한 번에</b> 고르면 순서대로 이어 붙입니다.<br>
             파일 안에 <code>제목: OOO</code>이 있으면 그대로 제목이 되고, 없으면 내용에 맞는 제목을 만들어 드립니다.
           </div>
-          <div class="field"><label>파일 선택</label><input type="file" id="sentFileInput" accept=".pdf,.docx,.txt,.md,.csv"></div>
+          <div class="field"><label>파일 선택</label><input type="file" id="sentFileInput" accept=".pdf,.docx,.txt,.md,.csv" multiple></div>
         </div>
 
         <div id="sentType" style="display:none">
@@ -667,7 +668,7 @@
 <!-- 지문 확인 시트 -->
 <div class="sheet" id="textSheet"><div class="inner">
   <h3>지문 확인</h3>
-  <div class="hint" style="margin-bottom:10px">본문을 직접 고칠 수 있습니다. 한 줄에 한 문장, 한자는 <code>漢字[かんじ]</code> 형식입니다.</div>
+  <div class="hint" style="margin-bottom:10px" id="txHint">본문을 직접 고칠 수 있습니다. 한 줄에 한 문장, 한자는 <code>漢字[かんじ]</code> 형식입니다.</div>
   <div class="field"><label>제목</label><input id="txTitle"></div>
   <div class="row" style="gap:10px">
     <div class="field grow"><label>날짜</label><input type="date" id="txDate"></div>
@@ -702,7 +703,7 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v2.5';
+const APP_VER='v2.6';
 const APP_DATE='2026-09-04';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
@@ -2994,6 +2995,13 @@ const TEXT_PROMPT = [
 '- 자료에 날짜가 있으면 date 에 YYYY-MM-DD 로, 없으면 생략',
 '- 원문에 없는 문장을 지어내지 말 것. 읽을 수 없는 부분은 뺄 것',
 '- 문제 번호, 쪽번호, 머리말 같은 본문이 아닌 것은 제외할 것',
+'',
+'자료가 여러 장일 때',
+'- 첨부된 순서대로 이어진 **한 편**의 지문이다. 나눠서 여러 개를 만들지 말고 lines 하나로 합칠 것',
+'- 쪽이 나뉜 자리에서 문장이 잘려 있으면 이어 붙여 한 문장으로 만들 것',
+'- 제목은 처음 나오는 것 하나만 쓰고, 뒤쪽 쪽에서 다시 뽑지 말 것',
+'- 지은이 이름, 쪽번호, 각주 번호는 본문에서 뺄 것',
+'',
 '- 설명 없이 JSON만 출력할 것',
 '',
 '{"title":"私[わたし]の一日[いちにち]","date":"2026-09-04",',
@@ -3095,22 +3103,38 @@ function sentSay(msg,cls){
   const el=$('#sentHint'); if(!el) return;
   el.innerHTML=msg||''; el.style.display=msg?'':'none';
 }
-async function sentFromFile(file){
+/* 여러 장을 «한 번의 요청»으로 보낸다.
+   장마다 따로 부르면 모델이 앞 쪽을 못 봐서 쪽 경계에서 잘린 문장을 이어 붙이지 못하고,
+   제목도 쪽마다 새로 만들어 버린다. 교과서 지문은 두 쪽 이상인 것이 보통이라 이게 기본 동작이어야 한다. */
+const SENT_MAX_FILES=10;
+async function sentFromFiles(files){
   if(sentBusy) return;
+  const list=[].slice.call(files||[]);
+  if(!list.length) return;
   if(!AI.key||!AI.model){
     sentSay('설정 → <b>사진 인식 (AI)</b>에서 API 키를 먼저 넣어 주세요. 사진·문서에서 지문을 뽑는 데 필요합니다.');
     return;
   }
+  if(list.length>SENT_MAX_FILES){
+    sentSay('<b>한 번에 '+SENT_MAX_FILES+'장까지</b> 합칠 수 있습니다. 나눠서 올려 주세요. (고른 것: '+list.length+'장)');
+    return;
+  }
   sentBusy=true;
-  sentSay('<span class="spin" style="display:inline-block;vertical-align:-2px"></span> 읽는 중…');
+  const spin='<span class="spin" style="display:inline-block;vertical-align:-2px"></span> ';
   try{
-    const blocks=await fileBlocks(file);
+    const blocks=[];
+    for(let i=0;i<list.length;i++){
+      sentSay(spin+(list.length>1 ? '자료를 여는 중… '+(i+1)+'/'+list.length : '읽는 중…'));
+      const bs=await fileBlocks(list[i]);
+      for(const b of bs) blocks.push(b);
+    }
+    sentSay(spin+(list.length>1 ? list.length+'장을 한 편으로 읽는 중…' : '읽는 중…'));
     const o=await aiJson(blocks, TEXT_PROMPT);
     const t=normText({title:o.title, date:o.date||$('#sentDate').value||todayStr(),
                       lines:o.lines, target:$('#sentTarget').value});
     if(!t.lines.length) throw new Error('읽을 수 있는 문장을 찾지 못했습니다. 글자가 크고 밝게 나오도록 다시 찍어 보세요.');
     sentSay('');
-    openTextSheet(t);
+    openTextSheet(t, list.length);
   }catch(e){
     sentSay('<b>실패</b> · '+esc((e&&e.message)||'처리하지 못했습니다.'));
   }
@@ -3119,8 +3143,11 @@ async function sentFromFile(file){
 
 /* ---------- 확인 시트 ---------- */
 let txDraft=null;
-function openTextSheet(t){
+function openTextSheet(t, srcN){
   txDraft=t;
+  { const h=$('#txHint');
+    if(h) h.innerHTML = (srcN>1 ? '<b>'+srcN+'장을 한 편으로 합쳤습니다.</b> 쪽이 넘어가는 자리가 자연스러운지 확인해 주세요.<br>' : '')
+                      + '본문을 직접 고칠 수 있습니다. 한 줄에 한 문장, 한자는 <code>漢字[かんじ]</code> 형식입니다.'; }
   $('#txTitle').value=t.title;
   $('#txDate').value=t.date;
   $('#txTarget').value=t.target;
@@ -3158,7 +3185,7 @@ $$('#sentMode button').forEach(b=>b.onclick=()=>{
 $('#btnSentShoot').onclick=()=>$('#sentCamInput').click();
 $('#btnSentPick').onclick=()=>$('#sentPickInput').click();
 ['#sentCamInput','#sentPickInput','#sentFileInput'].forEach(sel=>{
-  $(sel).onchange=e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=''; if(f) sentFromFile(f); };
+  $(sel).onchange=e=>{ const fs=e.target.files; const list=fs?[].slice.call(fs):[]; e.target.value=''; if(list.length) sentFromFiles(list); };
 });
 /* 「제목: OOO」이 본문 첫머리에 있으면 제목으로 올린다 */
 function splitTitle(body){
@@ -3431,4 +3458,4 @@ document.addEventListener('keydown',e=>{
 </script>
 </body>
 </html>
-<!-- 일본어 단어장 v2.5 (PWA) · 2026-09-04 -->
+<!-- 일본어 단어장 v2.6 (PWA) · 2026-09-04 -->

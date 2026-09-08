@@ -1,11 +1,12 @@
 /* 일본어 단어장 — service worker
    앱 껍데기를 캐시해 두어 인터넷이 없어도 실행되게 한다.
    앱을 새로 배포할 때는 CACHE 값을 올리면 이전 캐시가 정리된다. */
-const CACHE = 'jvocab-v2.8.0';
+const CACHE = 'jvocab-v2.9.0';
 const SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
+  './kanji.json',          /* 한자 획순 (KanjiVG) — 오프라인에서도 쓰려면 미리 받아 둔다 */
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',

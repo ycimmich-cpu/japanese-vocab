@@ -106,7 +106,9 @@
   .flash .pic{position:relative;aspect-ratio:1.2/1;background:linear-gradient(140deg,#2b2f36,#0f1114);display:grid;place-items:center}
   .flash .pic img{width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(1) contrast(1.05)}
   .flash .pic .kanjiart{font-family:var(--jp);font-size:96px;font-weight:800;color:rgba(255,255,255,.9);letter-spacing:4px}
-  .flash .pic .mark{position:absolute;right:14px;bottom:14px;width:44px;height:44px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.2);font-size:18px;color:#111}
+  .flash .pic .marks{position:absolute;right:14px;bottom:14px;display:flex;flex-direction:column;gap:10px}
+  .flash .pic .mark{width:44px;height:44px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.2);font-size:18px;color:#111}
+  .flash .pic .mark .lic{width:21px;height:21px}
   .flash .pic .mark.on{background:#111;color:#fff}
   .flash .info{padding:22px 20px 20px}
   .wordline{display:flex;align-items:flex-start;gap:10px}
@@ -162,6 +164,25 @@
   .sheet.on{display:flex}
   .sheet .inner{background:var(--panel);width:100%;max-width:520px;border-radius:24px 24px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto}
   .sheet h3{margin:2px 0 14px;font-size:16px}
+
+  /* ---------- 획순 보기 (KanjiVG) ---------- */
+  .kvgchips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .kvgchip{font-family:var(--jp);font-size:22px;font-weight:700;line-height:1;
+           padding:8px 12px;border-radius:14px;background:var(--soft);color:var(--ink)}
+  .kvgchip.on{background:var(--accent);color:var(--accent-ink)}
+  .kvgstage{width:100%;max-width:280px;margin:0 auto;aspect-ratio:1/1;
+            background:var(--soft);border-radius:20px;color:var(--ink)}
+  #kvgSvg{width:100%;height:100%;display:block}
+  .kvg-grid line{stroke:var(--line);stroke-width:.7;stroke-dasharray:3.5 3.5}
+  .kvg-guide{fill:none;stroke:currentColor;opacity:.14;stroke-width:5.4;
+             stroke-linecap:round;stroke-linejoin:round}
+  .kvg-ink{fill:none;stroke:currentColor;stroke-width:5.4;
+           stroke-linecap:round;stroke-linejoin:round}
+  .kvg-ink.cur{stroke:#CB4A2E}
+  .kvg-num{display:none;font-size:6.4px;font-weight:800;fill:#CB4A2E;
+           font-family:var(--jp);paint-order:stroke;stroke:var(--soft);stroke-width:1.6px}
+  #kvgSvg.nums .kvg-num{display:block}
+  .kvgmeta{text-align:center;font-size:13px;font-weight:700;color:var(--sub);margin-top:10px}
 
   /* ---------- 엔소 마크와 시작 애니메이션 ---------- */
   #splash{position:fixed;inset:0;z-index:200;background:#16181D;display:grid;place-items:center;
@@ -550,6 +571,10 @@
         <button class="btn block sm" id="btnReset" style="color:#b91c1c">전체 삭제</button>
         <div class="hint" style="margin:12px 0 0">데이터는 이 기기의 브라우저 안에 저장되며, PC와 휴대폰은 따로 관리됩니다. <b>앱 파일을 새 버전으로 바꾸기 전에 백업을 먼저 내보내 주세요.</b> 휴대폰으로 옮길 때도 백업 파일을 내보낸 뒤 휴대폰에서 불러오면 됩니다.</div>
       </div>
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:10px">자료 출처</div>
+        <div class="hint" style="margin:0">한자 획순은 <b>KanjiVG</b>의 자료를 씁니다. Copyright © Ulrich Apel, <b>CC BY-SA 3.0</b>. 자세한 내용은 <b>kanjivg.tagaini.net</b><br>이 앱에 담긴 획순 자료는 같은 조건(CC BY-SA 3.0)으로 배포됩니다.</div>
+      </div>
       <div class="verline" id="setVer"></div>
     </div>
   </section>
@@ -715,18 +740,34 @@
 
 <div class="sheet" id="editSheet"><div class="inner" id="editInner"></div></div>
 
+<!-- 획순 보기 -->
+<div class="sheet" id="kvgSheet"><div class="inner">
+  <h3 id="kvgTitle">획순</h3>
+  <div class="kvgchips" id="kvgChips"></div>
+  <div class="kvgstage"><svg id="kvgSvg" viewBox="0 0 109 109"></svg></div>
+  <div class="kvgmeta" id="kvgMeta"></div>
+  <div class="row" style="gap:8px;margin-top:12px">
+    <button class="btn" id="kvgPrev">‹ 앞 획</button>
+    <button class="btn grow primary" id="kvgPlay">▶ 다시 보기</button>
+    <button class="btn" id="kvgNext">다음 획 ›</button>
+  </div>
+  <label class="row" style="margin:12px 2px 0"><input type="checkbox" id="kvgNum" style="width:auto"> <span>획 번호 보기</span></label>
+  <button class="btn block" style="margin-top:14px" id="kvgClose">닫기</button>
+  <div class="hint" style="margin:12px 0 0">획순 자료: <b>KanjiVG</b> (Ulrich Apel, CC BY-SA 3.0) · kanjivg.tagaini.net</div>
+</div></div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v2.8';
+const APP_VER='v2.9';
 const APP_DATE='2026-09-08';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
 const KEY='jvocab.v1';
 const DEF_SET={voice:'',rate:0.9,autoSpeak:true,autoSpeakEx:false,autoAdvance:false,advSec:7,hideMeaning:false,
-               readTarget:100, lblSeen:0, lblIntro:0};
+               readTarget:100, lblSeen:0, lblIntro:0, kvgNum:false, kvgIntro:0};
 let S={words:[],texts:[],settings:Object.assign({},DEF_SET),installed:[]};
 function load(){
     try{const r=localStorage.getItem(KEY); if(r){const o=JSON.parse(r); S.words=o.words||[]; S.texts=(o.texts||[]).map(normText); S.settings=Object.assign({},DEF_SET,o.settings||{}); S.installed=o.installed||[];}}
@@ -1143,6 +1184,149 @@ $('#btnFileAdd').onclick=()=>{
 $('#btnSample').onclick=()=>{ addWords(SAMPLE.map(o=>makeWord(Object.assign({date:todayStr()},o)))); go('home'); };
 
 /* ===================== 단어 편집 시트 ===================== */
+/* ===================== 획순 보기 (KanjiVG) =====================
+   자료: KanjiVG — Ulrich Apel, CC BY-SA 3.0 (http://kanjivg.tagaini.net)
+   pwa/kanji.json 에 { "한자": ["획1 path", "획2 path", ...] } 형태로 담겨 있다.
+   좌표계는 KanjiVG 표준인 109×109.
+
+   ⚠ 파일이 1.5MB라 앱 시작을 막지 않도록 «처음 누를 때» 한 번만 받는다.
+     PC용 단독 파일은 fetch 가 막히므로(file://) 빌드 때 KVG_RAW 로 미리 심는다. */
+const KVG_RE=/[一-鿿ぁ-ゖァ-ヺー]/;
+let KVG=null, kvgFetch=null;
+function kvgLoad(){
+  if(KVG) return Promise.resolve(KVG);
+  if(kvgFetch) return kvgFetch;
+  const src = (typeof KVG_RAW!=='undefined' && KVG_RAW)
+    ? Promise.resolve(KVG_RAW)
+    : fetch('./kanji.json').then(r=>{ if(!r.ok) throw new Error('kanji.json '+r.status); return r.text(); });
+  kvgFetch = src.then(t=>{ KVG=JSON.parse(t); return KVG; })
+                .catch(e=>{ kvgFetch=null; throw e; });
+  return kvgFetch;
+}
+
+let kvgS=null;   /* {word, chars, ci, n, token} */
+const kvgList=()=>{ const a=(KVG&&kvgS)?(KVG[kvgS.chars[kvgS.ci]]||[]):[]; return a; };
+
+function kvgChars(word){
+  const out=[];
+  for(const ch of stripRuby(word||'')) if(KVG[ch] && out.indexOf(ch)<0) out.push(ch);
+  return out;
+}
+function kvgStart(d){
+  const m=/^[Mm]\s*(-?[\d.]+)[,\s]+(-?[\d.]+)/.exec(d);
+  return m?[parseFloat(m[1]), parseFloat(m[2])]:[10,10];
+}
+
+function kvgOpen(word){
+  if(!KVG) toast('획순 자료를 받는 중입니다…', null, 2500);   /* 처음 한 번만 */
+  kvgLoad().then(()=>{
+    const cs=kvgChars(word);
+    kvgS={word:word, chars:cs, ci:0, n:0, token:0};
+    $('#kvgTitle').textContent=stripRuby(word)+' 획순';
+    $('#kvgNum').checked=!!S.settings.kvgNum;
+    $('#kvgSvg').classList.toggle('nums', !!S.settings.kvgNum);
+    if(!cs.length){
+      $('#kvgChips').innerHTML='';
+      $('#kvgSvg').innerHTML='';
+      $('#kvgMeta').textContent='이 단어에는 획순 자료가 있는 글자가 없습니다.';
+    }else{
+      kvgChips(); kvgShow(0, true);
+    }
+    $('#kvgSheet').classList.add('on');
+  }).catch(()=>{
+    toast('획순 자료를 불러오지 못했습니다. 인터넷에 한 번 연결하면 그다음부터는 오프라인에서도 됩니다.', null, 5000);
+  });
+}
+
+function kvgChips(){
+  const box=$('#kvgChips');
+  box.style.display = kvgS.chars.length>1 ? 'flex' : 'none';
+  box.innerHTML=kvgS.chars.map((c,i)=>
+    '<button class="kvgchip'+(i===kvgS.ci?' on':'')+'" data-i="'+i+'">'+esc(c)+'</button>').join('');
+  $$('#kvgChips .kvgchip').forEach(b=>b.onclick=()=>kvgShow(+b.dataset.i, true));
+}
+
+function kvgShow(i, play){
+  kvgS.ci=i; kvgS.token++;
+  $$('#kvgChips .kvgchip').forEach(b=>b.classList.toggle('on', +b.dataset.i===i));
+  const ds=kvgList();
+  $('#kvgSvg').innerHTML=
+    '<g class="kvg-grid"><line x1="54.5" y1="2" x2="54.5" y2="107"/><line x1="2" y1="54.5" x2="107" y2="54.5"/>'
+    +'<line x1="2" y1="2" x2="107" y2="107"/><line x1="107" y1="2" x2="2" y2="107"/></g>'
+    +ds.map(d=>'<path class="kvg-guide" d="'+d+'"/>').join('')
+    +ds.map((d,k)=>'<path class="kvg-ink" data-i="'+k+'" d="'+d+'"/>').join('')
+    +ds.map((d,k)=>{const p=kvgStart(d);
+        return '<text class="kvg-num" x="'+(p[0]-1.2)+'" y="'+(p[1]+1.2)+'">'+(k+1)+'</text>';}).join('');
+  kvgSet(0);
+  if(play) kvgPlay();
+}
+
+/* n획까지 그려 놓은 상태로 (애니메이션 없이) */
+function kvgSet(n){
+  kvgS.n=Math.max(0, Math.min(kvgList().length, n));
+  $$('#kvgSvg .kvg-ink').forEach((p,i)=>{
+    const L=p.getTotalLength();
+    p.style.transition='none';
+    p.style.strokeDasharray=L+' '+L;
+    p.style.strokeDashoffset=(i<kvgS.n?0:L);
+    p.classList.remove('cur');
+  });
+  kvgMeta();
+}
+function kvgMeta(){
+  const t=kvgList().length;
+  $('#kvgMeta').textContent = t? ('전체 '+t+'획 · 지금 '+kvgS.n+'획') : '';
+}
+
+/* 한 획을 붓처럼 그린다. 길이에 비례해 시간을 준다. */
+function kvgAnim(i){
+  return new Promise(res=>{
+    const p=$('#kvgSvg .kvg-ink[data-i="'+i+'"]');
+    if(!p) return res();
+    const L=p.getTotalLength();
+    p.style.transition='none';
+    p.style.strokeDasharray=L+' '+L;
+    p.style.strokeDashoffset=L;
+    p.classList.add('cur');
+    p.getBoundingClientRect();          /* 리플로우를 강제해야 transition 이 걸린다 */
+    const ms=Math.max(240, Math.min(1000, L*13));
+    p.style.transition='stroke-dashoffset '+ms+'ms linear';
+    p.style.strokeDashoffset=0;
+    setTimeout(()=>{ p.classList.remove('cur'); res(); }, ms+30);
+  });
+}
+
+function kvgPlay(){
+  const tk=++kvgS.token;
+  kvgSet(0);
+  const n=kvgList().length;
+  const step=i=>{
+    if(kvgS.token!==tk || i>=n) return;
+    kvgAnim(i).then(()=>{
+      if(kvgS.token!==tk) return;
+      kvgS.n=i+1; kvgMeta();
+      setTimeout(()=>step(i+1), 110);
+    });
+  };
+  step(0);
+}
+
+$('#kvgPlay').onclick=()=>kvgPlay();
+$('#kvgPrev').onclick=()=>{ kvgS.token++; kvgSet(kvgS.n-1); };
+$('#kvgNext').onclick=()=>{
+  const t=kvgList().length;
+  if(kvgS.n>=t){ kvgS.token++; kvgSet(0); return; }
+  const tk=++kvgS.token, i=kvgS.n;
+  kvgAnim(i).then(()=>{ if(kvgS.token!==tk) return; kvgS.n=i+1; kvgMeta(); });
+};
+$('#kvgNum').onchange=e=>{
+  S.settings.kvgNum=e.target.checked; save();
+  $('#kvgSvg').classList.toggle('nums', e.target.checked);
+};
+function kvgClose(){ if(kvgS) kvgS.token++; $('#kvgSheet').classList.remove('on'); }
+$('#kvgClose').onclick=kvgClose;
+$('#kvgSheet').onclick=e=>{ if(e.target.id==='kvgSheet') kvgClose(); };
+
 function openEdit(id){
   const w=S.words.find(x=>x.id===id); if(!w) return;
   $('#editInner').innerHTML=
@@ -1254,7 +1438,10 @@ function renderCard(){
     ? '<img src="'+w.img+'" alt="">'
     : '<div class="kanjiart">'+esc(art)+'</div>';
   $('#flash').innerHTML=
-   '<div class="pic">'+pic+'<div class="mark'+(w.fav?' on':'')+'" id="bookmark" title="즐겨찾기">'+(w.fav?'★':'☆')+'</div></div>'+
+   '<div class="pic">'+pic+'<div class="marks">'+
+     (KVG_RE.test(stripRuby(w.word))?'<div class="mark" id="btnKvg" title="획순 보기"><svg class="lic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.6 15.1 15.5 4.2a2.1 2.1 0 0 1 3 3L7.6 18.1l-4 1z"/><path d="M3 21.6h18"/></svg></div>':'')+
+     '<div class="mark'+(w.fav?' on':'')+'" id="bookmark" title="즐겨찾기">'+(w.fav?'★':'☆')+'</div>'+
+   '</div></div>'+
    '<div class="info">'+
      '<div class="wordline"><div class="grow"><div class="word" style="font-size:'+wSize+'px">'+esc(w.word)+'</div>'+
        '<div class="reading">['+esc(w.read||'')+']</div></div>'+
@@ -1271,6 +1458,12 @@ function renderCard(){
   const ex=$('#spEx'); if(ex) ex.onclick=()=>speak(w.ex);
   const tb=$('#tipBtn'); if(tb) tb.onclick=()=>alert(w.tip);
   $('#meanBox').onclick=()=>{ if(S.settings.hideMeaning&&!ses.revealed){ ses.revealed=true; renderCard(); } };
+  const bk=$('#btnKvg');
+  if(bk){
+    bk.onclick=()=>{ clearAdv(); kvgOpen(w.word); };
+    if(!S.settings.kvgIntro){ S.settings.kvgIntro=1; save();
+      setTimeout(()=>toast('오른쪽 ✎ 버튼을 누르면 한자를 획순으로 써 보여 줍니다.', null, 6000), 900); }
+  }
   $('#bookmark').onclick=()=>{ w.fav=!w.fav; save(); toast(w.fav?'★ 즐겨찾기에 추가했습니다.':'즐겨찾기에서 뺐습니다.');
     const m=$('#bookmark'); m.textContent=w.fav?'★':'☆'; m.classList.toggle('on',w.fav); };
   if(S.settings.autoSpeak) speak(w.word||w.read, ()=>{ if(S.settings.autoSpeakEx&&w.ex) setTimeout(()=>speak(w.ex),250); });
@@ -3530,6 +3723,7 @@ function markBusy(on){
 })();
 document.addEventListener('keydown',e=>{
   if(!$('#studyScreen').classList.contains('on')||!ses) return;
+  if($('.sheet.on')) return;   /* 획순 등 시트가 떠 있으면 카드가 넘어가면 안 된다 */
   if(e.key==='ArrowLeft'){ $('#btnKnown').click(); }
   if(e.key==='ArrowRight'){ $('#btnLearn').click(); }
   if(e.key===' '){ e.preventDefault(); const b=$('#spWord'); if(b) b.click(); }
@@ -3537,4 +3731,4 @@ document.addEventListener('keydown',e=>{
 </script>
 </body>
 </html>
-<!-- 일본어 단어장 v2.8 (PWA) · 2026-09-08 -->
+<!-- 일본어 단어장 v2.9 (PWA) · 2026-09-08 -->

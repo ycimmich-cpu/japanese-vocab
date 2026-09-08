@@ -125,9 +125,27 @@
   .extr b{font-weight:800}
   .flash .foot{display:flex;align-items:flex-end;justify-content:space-between;padding:14px 20px 18px}
   .lvl{font-size:12px;color:var(--sub);font-weight:700}
-  .tipbtn{background:var(--soft);border-radius:12px 0 0 12px;padding:8px 12px;font-size:13px;font-weight:700;display:flex;gap:4px;align-items:center;margin-right:-20px}
   .speak{width:44px;height:44px;border-radius:50%;background:var(--soft);display:grid;place-items:center;flex:none}
   .speak:active{transform:scale(.94)}
+  .speak.on{background:#CB4A2E;color:#fff}
+
+  /* ---------- 예문 읽기 (v3.0) ---------- */
+  .exbar{display:flex;align-items:center;gap:8px;margin-top:14px;
+         background:var(--soft);border-radius:16px;padding:7px 8px 7px 10px}
+  .exbar .rd{font-size:13px;font-weight:800;color:var(--sub);
+             margin-left:auto;padding-right:4px;white-space:nowrap}
+  .exbar .rd b{color:var(--ink);font-size:15px}
+  .minibtn{height:34px;border-radius:11px;background:var(--panel);display:inline-flex;
+           align-items:center;gap:5px;padding:0 11px;font-size:12.5px;font-weight:800;
+           color:var(--ink);flex:none;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+  .minibtn .lic{width:15px;height:15px}
+  .minibtn:active{transform:scale(.96)}
+  .minibtn.on{background:#CB4A2E;color:#fff}
+  .minibtn.done{background:var(--accent);color:var(--accent-ink)}
+  @media (prefers-color-scheme: dark){ .minibtn{background:#2c3038} }
+  .pbar{height:4px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:12px}
+  .pbar > i{display:block;height:100%;background:var(--ink);transition:width .25s}
+  .pbar > i.full{background:#CB4A2E}
   .speak svg{width:20px;height:20px}
   .lic{width:1em;height:1em;flex:0 0 auto;vertical-align:-.12em}
   .ansbtn .lic{width:20px;height:20px}
@@ -531,6 +549,13 @@
         <button class="btn sm" style="margin-top:12px" id="btnTestVoice">발음 테스트</button>
       </div>
       <div class="card">
+        <div style="font-weight:800;margin-bottom:10px">예문 읽기</div>
+        <div class="field"><label>기본 목표 <b id="exTgtVal">10</b>회</label><input type="range" id="exTarget" min="1" max="100" step="1" value="10"></div>
+        <div class="field"><label>반복 사이 간격 <b id="exGapVal">1.5</b>초</label><input type="range" id="exGap" min="0.3" max="5" step="0.1" value="1.5"></div>
+        <label class="row"><input type="checkbox" id="exAuto" style="width:auto"> <span>반복 1회마다 «읽음»을 자동으로 올리기</span></label>
+        <div class="hint" style="margin:12px 0 0">«읽음»은 <b>내가 소리 내어 읽은 횟수</b>입니다. 앱이 읽어 주는 것은 듣기이므로 기본은 직접 누르게 되어 있습니다. 단어마다 목표를 따로 정하려면 목록에서 단어를 눌러 주세요.</div>
+      </div>
+      <div class="card">
         <div style="font-weight:800;margin-bottom:10px">학습 카드</div>
         <label class="row"><input type="checkbox" id="autoAdvance" style="width:auto"> <span>자동 넘김 사용</span></label>
         <div class="field" style="margin-top:10px"><label>자동 넘김 시간 <b id="advVal">7</b>초</label><input type="range" id="advSec" min="3" max="20" step="1" value="7"></div>
@@ -761,13 +786,14 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v2.9';
+const APP_VER='v3.0';
 const APP_DATE='2026-09-08';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
 const KEY='jvocab.v1';
 const DEF_SET={voice:'',rate:0.9,autoSpeak:true,autoSpeakEx:false,autoAdvance:false,advSec:7,hideMeaning:false,
-               readTarget:100, lblSeen:0, lblIntro:0, kvgNum:false, kvgIntro:0};
+               readTarget:100, lblSeen:0, lblIntro:0, kvgNum:false, kvgIntro:0,
+               exTarget:10, exGap:1.5, exAuto:false};
 let S={words:[],texts:[],settings:Object.assign({},DEF_SET),installed:[]};
 function load(){
     try{const r=localStorage.getItem(KEY); if(r){const o=JSON.parse(r); S.words=o.words||[]; S.texts=(o.texts||[]).map(normText); S.settings=Object.assign({},DEF_SET,o.settings||{}); S.installed=o.installed||[];}}
@@ -849,6 +875,11 @@ let MODE='word';
    앱 시작이 통째로 멈춘다 (v2.4의 rdToken, v2.5의 selMode에서 실제로 겪음).
    `typeof x` 로 감싸는 것은 방어가 되지 않는다 — TDZ에서는 typeof 자체가 던진다. */
 let curText=null, rdToken=0;
+/* 예문 읽기 상태. go()가 stopEx()를 부르므로 여기 함께 둔다 (TDZ) */
+let exToken=0, exLoopN=0, exMode='';
+/* 파형 아이콘. paintEx()가 읽으므로 go() 위에 둔다 */
+const WAVE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">'+
+  '<path d="M3 12h1M7 8v8M11 4v16M15 7v10M19 10v4M21 12h0"/></svg>';
 let selMode=false;
 const selSet=new Set();
 function syncTabs(){
@@ -865,6 +896,7 @@ function pick(m){
 function go(name){
   if(name==='startStudy'){ openStart(); return; }
   if(typeof stopRead==='function' && name!=='read') stopRead();
+  if(name!=='study') stopEx();   /* 화면을 옮기면 예문 반복도 멈춘다 */
   /* 다른 화면으로 가면 선택 상태를 남기지 않는다 — 무엇이 골라져 있는지 안 보이는 채로 남으면 위험하다 */
   if(selMode){
     selMode=false; selSet.clear();
@@ -1052,6 +1084,10 @@ function parseText(text,date){
 function makeWord(o){
   return {id:uid(),word:stripRuby(o.word||''),read:o.read||'',pos:o.pos||'n',mean:o.mean||'',
     ex:o.ex||'',exKo:o.exKo||'',tip:o.tip||'',level:o.level||'N5',img:o.img||'',
+    /* 예문 읽기 기록 — 다시 만들 수 없는 기록이라 백업에 실린다 (v3.0) */
+    exCount:Math.max(0,parseInt(o.exCount,10)||0),
+    exTarget:Math.max(0,parseInt(o.exTarget,10)||0),   /* 0 = 설정의 기본값을 따름 */
+    exHist:(o.exHist&&typeof o.exHist==='object')?o.exHist:{},
     status:o.status||'new',fav:!!o.fav,date:o.date||todayStr(),ts:Date.now(),seen:0};
 }
 /* 같은 날짜의 같은 단어는 다시 넣지 않는다 (같은 파일을 두 번 불러와도 안전) */
@@ -1338,6 +1374,8 @@ function openEdit(id){
     '<div class="field"><label>예문 해석</label><input id="eK" value="'+esc(w.exKo)+'"></div>'+
     '<div class="field"><label>팁</label><input id="eT" value="'+esc(w.tip||'')+'"></div>'+
     '<div class="field"><label>날짜</label><input type="date" id="eD" value="'+esc(w.date)+'"></div>'+
+    '<div class="field"><label>예문 읽기 목표 (비우면 기본 '+exTargetDef()+'회) · 지금까지 '+exCountOf(w)+'회 읽음</label>'+
+      '<input type="number" id="eXT" min="1" max="999" placeholder="'+exTargetDef()+'" value="'+(w.exTarget||'')+'"></div>'+
     '<div class="field"><label>상태</label><div class="seg" id="eS">'+
       ['new:미분류','learn:まだ','known:よし'].map(s=>{const[v,t]=s.split(':');
         return '<button data-v="'+v+'"'+(w.status===v?' class="on"':'')+'>'+t+'</button>';}).join('')+'</div></div>'+
@@ -1353,7 +1391,9 @@ function openEdit(id){
   $('#eDel').onclick=()=>{ $('#editSheet').classList.remove('on'); delWords([id]); };
   $('#eSave').onclick=()=>{
     Object.assign(w,{word:$('#eW').value.trim(),read:$('#eR').value.trim(),mean:$('#eM').value.trim(),
-      ex:$('#eE').value.trim(),exKo:$('#eK').value.trim(),tip:$('#eT').value.trim(),date:$('#eD').value||w.date,status:st});
+      ex:$('#eE').value.trim(),exKo:$('#eK').value.trim(),tip:$('#eT').value.trim(),
+      exTarget:Math.max(0,parseInt($('#eXT').value,10)||0),
+      date:$('#eD').value||w.date,status:st});
     save(); $('#editSheet').classList.remove('on'); renderList(); renderHome(); toast('저장했습니다.');
   };
   $('#editSheet').classList.add('on');
@@ -1449,14 +1489,21 @@ function renderCard(){
      '<div class="meaning" id="meanBox">'+(w.pos?'<span class="pos">'+esc(w.pos)+'</span>':'')+
         '<span>'+(hide?'<span class="muted">탭하면 뜻 보기</span>':esc(w.mean))+'</span></div>'+
      (w.ex? '<div class="sep"></div><div class="exline"><div class="ex">'+ruby(w.ex,w.word)+'</div>'+
-            '<button class="speak" id="spEx" title="예문 발음">'+WAVE+'</button></div>'+
-            (w.exKo?'<div class="extr">'+esc(w.exKo)+'</div>':'') : '')+
+            '<button class="speak" id="spEx" title="예문 1회 듣기">'+WAVE+'</button></div>'+
+            (w.exKo?'<div class="extr">'+esc(w.exKo)+'</div>':'')+
+            '<div class="exbar">'+
+              '<button class="minibtn" id="exLoop" title="반복해서 듣기"></button>'+
+              '<button class="minibtn done" id="exDone" title="소리 내어 읽었으면 누르세요">'+'<svg class="lic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.6l5.3 5.3L20 6.6"/></svg>'+'읽음</button>'+
+              '<span class="rd" id="exCnt"></span>'+
+            '</div>'+
+            '<div class="pbar"><i id="exBar" style="width:0"></i></div>' : '')+
    '</div>'+
-   '<div class="foot"><span class="lvl">'+esc(w.level||'')+'</span>'+
-     (w.tip?'<button class="tipbtn" id="tipBtn">팁 ›</button>':'')+'</div>';
+   '<div class="foot"><span class="lvl">'+esc(w.level||'')+'</span></div>';
   $('#spWord').onclick=()=>speak(w.word||w.read);
-  const ex=$('#spEx'); if(ex) ex.onclick=()=>speak(w.ex);
-  const tb=$('#tipBtn'); if(tb) tb.onclick=()=>alert(w.tip);
+  const ex=$('#spEx'); if(ex) ex.onclick=()=>exOnce(w);
+  const el=$('#exLoop'); if(el) el.onclick=()=>exLoop(w);
+  const ed=$('#exDone'); if(ed) ed.onclick=()=>exPlus(w);
+  stopEx();   /* 카드가 바뀌면 앞 카드의 반복을 끊는다 */
   $('#meanBox').onclick=()=>{ if(S.settings.hideMeaning&&!ses.revealed){ ses.revealed=true; renderCard(); } };
   const bk=$('#btnKvg');
   if(bk){
@@ -1469,8 +1516,6 @@ function renderCard(){
   if(S.settings.autoSpeak) speak(w.word||w.read, ()=>{ if(S.settings.autoSpeakEx&&w.ex) setTimeout(()=>speak(w.ex),250); });
   startAdv();
 }
-const WAVE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">'+
-  '<path d="M3 12h1M7 8v8M11 4v16M15 7v10M19 10v4M21 12h0"/></svg>';
 function answer(status){
   if(!ses) return;
   const w=ses.list[ses.i];
@@ -1520,6 +1565,100 @@ function startAdv(){
 }
 
 /* ===================== 퀴즈 ===================== */
+/* ===================== 예문 읽기 (v3.0) =====================
+   ① 예문 옆 🔊 = 1회 듣기 · 예문 아래 «반복» = 무한반복. 둘 다 다시 누르면 멈춘다.
+   ② «읽음»으로 소리 내어 읽은 횟수를 쌓는다 — 문장 읽기(음독)와 같은 방식.
+
+   ⚠ 「읽음」은 *내가* 읽은 횟수다. 앱이 읽어 주는 것은 듣기지 읽기가 아니므로
+     반복이 자동으로 올리지 않는다. 원하면 설정에서 켤 수 있다 (S.settings.exAuto).
+   ⚠ exToken/exLoopN/exMode 선언은 go() 위 블록에 있다. 여기로 옮기면 TDZ로 앱이 멈춘다. */
+const EX_REPEAT_IC = '<svg class="lic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>';
+const EX_STOP_IC   = '<svg class="lic" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="2.2"/></svg>';
+
+const exTargetDef = () => Math.max(1, parseInt(S.settings.exTarget,10) || 10);
+const exTargetOf  = w => Math.max(1, parseInt(w && w.exTarget,10) || exTargetDef());
+const exCountOf   = w => Math.max(0, parseInt(w && w.exCount,10) || 0);
+
+/* 지금 카드에 떠 있는 단어 (없으면 null) */
+function exCur(){ return (ses && ses.list && ses.list[ses.i]) || null; }
+
+function stopEx(){
+  exToken++; exMode=''; exLoopN=0;
+  if(window.speechSynthesis) speechSynthesis.cancel();
+  if(typeof markBusy==='function') markBusy(false);
+  paintEx();
+}
+
+/* 버튼 모양과 숫자를 한곳에서 그린다 */
+function paintEx(){
+  const w=exCur();
+  const sp=$('#spEx'), lp=$('#exLoop'), cnt=$('#exCnt'), bar=$('#exBar');
+  if(sp) sp.classList.toggle('on', exMode==='one');
+  if(sp) sp.innerHTML = exMode==='one' ? EX_STOP_IC : WAVE;
+  if(lp){
+    const on = exMode==='loop';
+    lp.classList.toggle('on', on);
+    lp.innerHTML = (on ? EX_STOP_IC : EX_REPEAT_IC) + (on ? ('반복 '+exLoopN) : '반복');
+  }
+  if(w && cnt){
+    const n=exCountOf(w), t=exTargetOf(w);
+    cnt.innerHTML = '<b>'+n+'</b> / '+t+'회' + (n>=t?' 🎉':'');
+    if(bar){
+      bar.style.width = Math.min(100, Math.round(n/t*100))+'%';
+      bar.classList.toggle('full', n>=t);
+    }
+  }
+}
+
+/* 1회 듣기 — 재생 중에 누르면 멈춘다 */
+function exOnce(w){
+  if(exMode){ stopEx(); return; }
+  const my=++exToken; exMode='one'; paintEx();
+  speak(w.ex, ()=>{ if(my!==exToken) return; exMode=''; paintEx(); });
+}
+
+/* 무한반복 — 다시 누르면 멈춘다 */
+function exLoop(w){
+  if(exMode){ stopEx(); return; }
+  /* 반복해 읽는 동안 카드가 저 혼자 넘어가면 안 된다 */
+  if(typeof clearAdv==='function') clearAdv();
+  const my=++exToken; exMode='loop'; exLoopN=0; paintEx();
+  const gap=Math.max(200, Math.round((parseFloat(S.settings.exGap)||1.5)*1000));
+  const step=()=>{
+    if(my!==exToken) return;
+    speak(w.ex, ()=>{
+      if(my!==exToken) return;
+      exLoopN++;
+      if(S.settings.exAuto) exBump(w, +1);
+      paintEx();
+      setTimeout(step, gap);
+    });
+  };
+  step();
+}
+
+/* 기록만 올리고 내린다. 카드가 넘어간 뒤 되돌리기를 눌러도 그 단어에 정확히 적용되도록
+   단어 객체를 직접 받는다 (화면 갱신은 그 단어가 아직 카드에 있을 때만). */
+function exBump(w, d){
+  if(!w) return 0;
+  const n=exCountOf(w)+d;
+  if(n<0) return 0;
+  w.exCount=n;
+  const day=todayStr(); w.exHist=w.exHist||{};
+  if(d>0) w.exHist[day]=(w.exHist[day]||0)+1;
+  else if(w.exHist[day]){ w.exHist[day]--; if(!w.exHist[day]) delete w.exHist[day]; }
+  save();
+  if(exCur()===w) paintEx();
+  return 1;
+}
+
+function exPlus(w){
+  if(!exBump(w, +1)) return;
+  const n=exCountOf(w), t=exTargetOf(w);
+  if(n===t) toast('🎉 「'+stripRuby(w.word)+'」 예문을 '+t+'회 읽었습니다!', null, 5000);
+  else toast('읽음 '+n+' / '+t+'회 · 눌러서 되돌리기', ()=>exBump(w,-1), 6000);
+}
+
 function speakSeq(list,cb){
   const arr=(list||[]).filter(Boolean);
   let k=0;
@@ -1611,12 +1750,18 @@ function renderSettings(){
   $('#autoSpeak').checked=S.settings.autoSpeak; $('#autoSpeakEx').checked=S.settings.autoSpeakEx;
   $('#autoAdvance').checked=S.settings.autoAdvance; $('#advSec').value=S.settings.advSec; $('#advVal').textContent=S.settings.advSec;
   $('#hideMeaning').checked=S.settings.hideMeaning;
+  $('#exTarget').value=S.settings.exTarget; $('#exTgtVal').textContent=S.settings.exTarget;
+  $('#exGap').value=S.settings.exGap; $('#exGapVal').textContent=S.settings.exGap;
+  $('#exAuto').checked=!!S.settings.exAuto;
   if(typeof renderAI==='function') renderAI();
 }
 $('#voiceSel').onchange=e=>{S.settings.voice=e.target.value;save();};
 $('#rateSel').oninput=e=>{S.settings.rate=+e.target.value;$('#rateVal').textContent=e.target.value;save();};
 $('#advSec').oninput=e=>{S.settings.advSec=+e.target.value;$('#advVal').textContent=e.target.value;save();};
-['autoSpeak','autoSpeakEx','autoAdvance','hideMeaning'].forEach(k=>{
+$('#exTarget').oninput=e=>{S.settings.exTarget=+e.target.value;$('#exTgtVal').textContent=e.target.value;save();
+  if(typeof paintEx==='function') paintEx();};
+$('#exGap').oninput=e=>{S.settings.exGap=+e.target.value;$('#exGapVal').textContent=e.target.value;save();};
+['autoSpeak','autoSpeakEx','autoAdvance','hideMeaning','exAuto'].forEach(k=>{
   $('#'+k).onchange=e=>{S.settings[k]=e.target.checked;save();};
 });
 $('#btnTestVoice').onclick=()=>speak('大人になったら、車を運転したいです。');
@@ -3731,4 +3876,4 @@ document.addEventListener('keydown',e=>{
 </script>
 </body>
 </html>
-<!-- 일본어 단어장 v2.9 (PWA) · 2026-09-08 -->
+<!-- 일본어 단어장 v3.0 (PWA) · 2026-09-08 -->

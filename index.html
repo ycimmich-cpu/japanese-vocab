@@ -127,6 +127,20 @@
   .speak{width:44px;height:44px;border-radius:50%;background:var(--soft);display:grid;place-items:center;flex:none}
   .speak:active{transform:scale(.94)}
   .speak svg{width:20px;height:20px}
+  .lic{width:1em;height:1em;flex:0 0 auto;vertical-align:-.12em}
+  .ansbtn .lic{width:20px;height:20px}
+  .stat .box .l .lic{width:12px;height:12px;opacity:.75}
+  .stat .box .l{display:flex;align-items:center;justify-content:center;gap:4px}
+  /* よし·まだ 안내줄 — 처음 몇 번만 보인다 (S.settings.lblSeen) */
+  .lblhint{display:none;align-items:center;justify-content:center;gap:5px;
+           font-size:12px;font-weight:700;color:var(--sub);padding:0 14px 2px;letter-spacing:-.2px}
+  .lblhint.on{display:flex}
+  /* 안내줄과 정답 버튼은 한 덩어리로 바닥에 붙는다.
+     .answerbar 혼자 sticky 이면 안내줄 위를 덮어 버린다 (v2.8에서 실제로 겪음). */
+  .ansdock{position:sticky;bottom:0;background:var(--bg);z-index:2}
+  .ansdock .answerbar{position:static}
+  .lblhint b{color:var(--ink);font-weight:800}
+  .lblhint .sep{opacity:.5;margin:0 5px;line-height:1}
   .answerbar{display:flex;gap:12px;padding:14px 14px calc(18px + env(safe-area-inset-bottom));background:var(--bg);position:sticky;bottom:0}
   .ansbtn{flex:1;border-radius:20px;padding:18px 10px;font-size:17px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:var(--shadow)}
   .ansbtn.known{background:var(--panel);color:var(--ink);flex:0 0 42%}
@@ -304,8 +318,8 @@
     <div class="body">
       <div class="stat">
         <div class="box"><div class="n" id="stTotal">0</div><div class="l">전체 단어</div></div>
-        <div class="box"><div class="n" id="stLearn">0</div><div class="l">학습할게요</div></div>
-        <div class="box"><div class="n" id="stKnown">0</div><div class="l">알고 있어요</div></div>
+        <div class="box"><div class="n" id="stLearn">0</div><div class="l"><svg class="lic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.4 12a8.4 8.4 0 1 1-2.5-6"/><path d="M20.6 3.9v5.1h-5.1"/></svg>まだ</div></div>
+        <div class="box"><div class="n" id="stKnown">0</div><div class="l"><svg class="lic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.6l5.3 5.3L20 6.6"/></svg>よし</div></div>
       </div>
       <div id="dayList"></div>
       <div class="verline" id="homeVer"></div>
@@ -324,8 +338,8 @@
       <div class="field"><input id="searchBox" placeholder="단어 · 후리가나 · 뜻 검색"></div>
       <div class="seg" id="listFilter" style="margin-bottom:12px">
         <button data-f="all" class="on">전체</button>
-        <button data-f="learn">학습할게요</button>
-        <button data-f="known">알고 있어요</button>
+        <button data-f="learn" title="더 학습할 단어">まだ</button>
+        <button data-f="known" title="알고 있는 단어">よし</button>
         <button data-f="new">미분류</button>
         <button data-f="fav">★ 즐겨찾기</button>
       </div>
@@ -461,9 +475,12 @@
       <div class="flash" id="flash"></div>
       <div style="height:14px"></div>
     </div>
+    <div class="ansdock">
+    <div class="lblhint" id="lblHint"><svg class="lic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.6l5.3 5.3L20 6.6"/></svg><b>よし</b> 알고 있어요<span class="sep">·</span><svg class="lic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.4 12a8.4 8.4 0 1 1-2.5-6"/><path d="M20.6 3.9v5.1h-5.1"/></svg><b>まだ</b> 더 학습할게요</div>
     <div class="answerbar">
-      <button class="ansbtn known" id="btnKnown">알고 있어요</button>
-      <button class="ansbtn learn" id="btnLearn">학습할게요 <span class="ring" id="ring"></span></button>
+      <button class="ansbtn known" id="btnKnown" title="알고 있어요"><svg class="lic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.6l5.3 5.3L20 6.6"/></svg>よし</button>
+      <button class="ansbtn learn" id="btnLearn" title="더 학습할게요"><svg class="lic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.4 12a8.4 8.4 0 1 1-2.5-6"/><path d="M20.6 3.9v5.1h-5.1"/></svg>まだ <span class="ring" id="ring"></span></button>
+    </div>
     </div>
   </section>
 
@@ -619,9 +636,9 @@
     <div class="field"><label>무엇을 학습할까요?</label>
       <div class="seg" id="optStatus">
         <button data-v="all" class="on">전체</button>
-        <button data-v="learn">학습할게요만</button>
-        <button data-v="known">알고있어요만</button>
-        <button data-v="new">미분류만</button>
+        <button data-v="learn" title="더 학습할 단어만">まだ</button>
+        <button data-v="known" title="알고 있는 단어만">よし</button>
+        <button data-v="new">미분류</button>
       </div>
     </div>
     <label class="row" style="margin:-2px 2px 12px"><input type="checkbox" id="optFav" style="width:auto"> <span>★ 즐겨찾기한 단어만</span></label>
@@ -703,13 +720,13 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v2.7';
-const APP_DATE='2026-09-07';   /* 마지막 수정일 */
+const APP_VER='v2.8';
+const APP_DATE='2026-09-08';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
 const KEY='jvocab.v1';
 const DEF_SET={voice:'',rate:0.9,autoSpeak:true,autoSpeakEx:false,autoAdvance:false,advSec:7,hideMeaning:false,
-               readTarget:100};
+               readTarget:100, lblSeen:0, lblIntro:0};
 let S={words:[],texts:[],settings:Object.assign({},DEF_SET),installed:[]};
 function load(){
     try{const r=localStorage.getItem(KEY); if(r){const o=JSON.parse(r); S.words=o.words||[]; S.texts=(o.texts||[]).map(normText); S.settings=Object.assign({},DEF_SET,o.settings||{}); S.installed=o.installed||[];}}
@@ -822,7 +839,7 @@ function go(name){
   if(!bare) syncTabs();
   $$('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.go===name));
   if(name==='pick') renderPick();
-  if(name==='home') renderHome();
+  if(name==='home'){ renderHome(); lblIntro(); }
   if(name==='list') renderList();
   if(name==='sent') renderTexts();
   if(name==='settings') renderSettings();
@@ -846,6 +863,12 @@ function groupByDate(){
   const g={};
   S.words.forEach(w=>{(g[w.date]=g[w.date]||[]).push(w);});
   return Object.keys(g).sort().reverse().map(d=>({date:d,items:g[d]}));
+}
+/* 표기가 바뀐 첫 방문에만 한 번. 이후에는 다시 뜨지 않는다. */
+function lblIntro(){
+  if(S.settings.lblIntro || !S.words.length) return;
+  S.settings.lblIntro=1; save();
+  setTimeout(()=>toast('「よし」= 알고 있어요 · 「まだ」= 더 학습할게요', null, 7000), 600);
 }
 function renderHome(){
   $('#stTotal').textContent=S.words.length;
@@ -876,7 +899,7 @@ function renderHome(){
     const wd=['일','월','화','수','목','금','토'][new Date(x.date+'T00:00:00').getDay()];
     return '<button class="daycard" data-date="'+x.date+'">'+
       '<div class="grow"><div class="d">'+x.date.replace(/-/g,'.')+' ('+wd+')</div>'+
-      '<div class="meta">'+x.items.length+'단어 · 학습할게요 '+learn+' · 알고있어요 '+known+(nw?' · 미분류 '+nw:'')+'</div></div>'+
+      '<div class="meta">'+x.items.length+'단어 · まだ '+learn+' · よし '+known+(nw?' · 미분류 '+nw:'')+'</div></div>'+
       '<span class="badge learn">▶ 학습</span></button>';
   };
 
@@ -889,7 +912,7 @@ function renderHome(){
         '<span class="chev">▶</span>'+
         '<span class="grow"><span class="mtitle">'+y+'년 '+Number(mo)+'월</span>'+
         '<div class="mmeta">'+[m.days.length+'일', m.items.length+'단어',
-            (learn?'학습할게요 '+learn:''), (known?'알고있어요 '+known:'')
+            (learn?'まだ '+learn:''), (known?'よし '+known:'')
           ].filter(Boolean).join(' · ')+'</div></span>'+
         '<span class="mgo" data-mgo="'+m.key+'">▶ 이 달 학습</span>'+
       '</button>'+
@@ -939,7 +962,7 @@ function renderList(){
         (sel?'<span class="chk'+(on?' on':'')+'">✓</span>':'')+
         '<div class="grow"><div class="jp">'+(w.fav?'<span style="color:#f59e0b">★</span> ':'')+esc(w.word)+'</div><div class="rd">'+esc(w.read)+' · '+esc(w.mean)+'</div></div>'+
         '<span class="badge '+(w.status==='learn'?'learn':w.status==='known'?'known':'')+'">'+
-          (w.status==='learn'?'학습':w.status==='known'?'앎':'미분류')+'</span></div>';
+          (w.status==='learn'?'まだ':w.status==='known'?'よし':'미분류')+'</span></div>';
     }).join('')+'</div>').join('');
   $$('#wordList .witem').forEach(el=>el.onclick=()=>{
     if(sel){ selToggle(el.dataset.id, el); return; }
@@ -1132,7 +1155,7 @@ function openEdit(id){
     '<div class="field"><label>팁</label><input id="eT" value="'+esc(w.tip||'')+'"></div>'+
     '<div class="field"><label>날짜</label><input type="date" id="eD" value="'+esc(w.date)+'"></div>'+
     '<div class="field"><label>상태</label><div class="seg" id="eS">'+
-      ['new:미분류','learn:학습할게요','known:알고 있어요'].map(s=>{const[v,t]=s.split(':');
+      ['new:미분류','learn:まだ','known:よし'].map(s=>{const[v,t]=s.split(':');
         return '<button data-v="'+v+'"'+(w.status===v?' class="on"':'')+'>'+t+'</button>';}).join('')+'</div></div>'+
     '<button class="btn block sm" id="eFav" style="margin-top:4px">'+(w.fav?'★ 즐겨찾기 해제':'☆ 즐겨찾기에 추가')+'</button>'+
     '<div class="row" style="gap:10px;margin-top:14px">'+
@@ -1206,8 +1229,13 @@ $('#btnStartGo').onclick=()=>{
 
 /* ===================== 카드 학습 ===================== */
 let ses=null, advTimer=null;
+/* よし·まだ 는 새 표기라 처음 몇 번은 뜻을 같이 보여 준다. 4회 학습하면 사라진다. */
+const LBL_HINT_TIMES=4;
 function startCard(pool){
   ses={list:pool,i:0,done:0,skip:0,hist:[],revealed:false};
+  const seen=S.settings.lblSeen|0;
+  const hint=$('#lblHint'); if(hint) hint.classList.toggle('on', seen<LBL_HINT_TIMES);
+  if(seen<LBL_HINT_TIMES){ S.settings.lblSeen=seen+1; save(); }
   go('study'); renderCard();
 }
 function renderCard(){
@@ -3509,4 +3537,4 @@ document.addEventListener('keydown',e=>{
 </script>
 </body>
 </html>
-<!-- 일본어 단어장 v2.7 (PWA) · 2026-09-07 -->
+<!-- 일본어 단어장 v2.8 (PWA) · 2026-09-08 -->

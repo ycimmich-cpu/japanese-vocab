@@ -297,6 +297,20 @@
   #rdLines.showko .sline .ko{display:block}
   .sline.on .ko{color:var(--accent-ink);opacity:.8;border-top-color:rgba(255,255,255,.25)}
   /* 스위치 */
+  /* 묶음 배지 (v3.5) */
+  .bt{display:inline-block;background:var(--soft);color:var(--sub);border-radius:7px;
+      padding:1px 7px;font-size:11px;font-weight:700;margin-left:6px;vertical-align:1px;
+      max-width:12em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .daycard .bt{background:rgba(0,0,0,.06)}
+  .seg2{display:flex;gap:6px;background:var(--soft);padding:4px;border-radius:12px}
+  .seg2 button{flex:1;border-radius:9px;padding:8px 6px;font-size:12.5px;font-weight:700;
+               background:transparent;color:var(--sub)}
+  .seg2 button.on{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+  .bmrow{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line)}
+  .bmrow:last-child{border-bottom:none}
+  .bmrow .t{font-weight:700;font-size:13.5px}
+  .bmrow .n{font-size:11.5px;color:var(--sub)}
+
   .swrow{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
   .sw{display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;font-weight:700;
       background:var(--panel);box-shadow:var(--shadow);border-radius:999px;padding:7px 14px 7px 11px}
@@ -783,9 +797,37 @@
     <span class="pill" id="revCount">0개</span>
   </div>
   <div class="field"><label>등록 날짜</label><input type="date" id="revDate"></div>
+  <div id="revBatchWrap" style="display:none;margin-bottom:10px">
+    <label class="f" style="display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:5px">이 날짜에 이미 넣은 것이 있습니다</label>
+    <div class="seg2" id="revJoinSeg">
+      <button data-j="0" class="on">새 묶음으로</button>
+      <button data-j="1" id="revJoinBtn">이어 넣기</button>
+    </div>
+  </div>
+  <div class="field" id="revNameWrap"><label>묶음 이름 <span style="font-weight:400;color:var(--sub)">(비워도 됩니다)</span></label>
+    <input id="revBname" maxlength="30" placeholder="예: 교재 3과"></div>
   <div id="revList" style="max-height:42vh;overflow:auto;margin-bottom:12px"></div>
   <button class="btn primary block" id="revAdd">단어장에 추가</button>
   <button class="btn block" style="margin-top:8px" id="revCancel">나중에</button>
+</div></div>
+
+<!-- 묶음 설정 (v3.5) -->
+<div class="sheet" id="bmSheet"><div class="inner">
+  <h3>묶음 설정</h3>
+  <div class="muted" id="bmWho" style="font-size:12.5px;margin-bottom:12px"></div>
+  <div class="field"><label>묶음 이름</label>
+    <input id="bmName" maxlength="30" placeholder="비우면 번호만 씁니다"></div>
+  <button class="btn primary block" id="bmSave">이름 저장</button>
+
+  <div id="bmMergeWrap" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)">
+    <div class="f" style="font-size:12px;font-weight:700;color:var(--sub);margin-bottom:5px">같은 날의 다른 묶음과 합치기</div>
+    <select id="bmTarget"></select>
+    <button class="btn block" style="margin-top:8px" id="bmMerge">이 묶음을 위로 합치기</button>
+    <div class="hint" style="margin-top:8px">합치면 이 묶음의 단어가 고른 묶음으로 옮겨지고,
+      그 날짜의 묶음 번호가 1부터 다시 매겨집니다. <b>되돌릴 수 없습니다.</b></div>
+  </div>
+
+  <button class="btn block" style="margin-top:10px" id="bmClose">닫기</button>
 </div></div>
 
 <div class="sheet" id="editSheet"><div class="inner" id="editInner"></div></div>
@@ -811,7 +853,7 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v3.4';
+const APP_VER='v3.5';
 const APP_DATE='2026-09-08';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
@@ -957,10 +999,17 @@ function syncAddMode(){
 }
 
 /* ===================== 홈(날짜별) ===================== */
+/* 날짜가 아니라 «묶음»으로 묶는다. 1번 묶음의 키는 날짜 그대로라 정렬이 자연스럽다 */
 function groupByDate(){
   const g={};
-  S.words.forEach(w=>{(g[w.date]=g[w.date]||[]).push(w);});
-  return Object.keys(g).sort().reverse().map(d=>({date:d,items:g[d]}));
+  S.words.forEach(w=>{ const k=bkey(w); (g[k]=g[k]||[]).push(w); });
+  const cnt={};
+  Object.keys(g).forEach(k=>{ const d=bparse(k).date; cnt[d]=(cnt[d]||0)+1; });
+  return Object.keys(g).sort().reverse().map(k=>{
+    const p=bparse(k);
+    return {key:k, date:p.date, batch:p.batch, name:bnameOf(p.date,p.batch),
+            multi:cnt[p.date]>1, items:g[k]};
+  });
 }
 /* 표기가 바뀐 첫 방문에만 한 번. 이후에는 다시 뜨지 않는다. */
 function lblIntro(){
@@ -995,9 +1044,12 @@ function renderHome(){
     const known=x.items.filter(w=>w.status==='known').length;
     const nw=x.items.length-learn-known;
     const wd=['일','월','화','수','목','금','토'][new Date(x.date+'T00:00:00').getDay()];
-    return '<button class="daycard" data-date="'+x.date+'">'+
-      '<div class="grow"><div class="d">'+x.date.replace(/-/g,'.')+' ('+wd+')</div>'+
+    const tag = x.name ? '<span class="bt">'+esc(x.name)+'</span>'
+                       : (x.multi? '<span class="bt">'+x.batch+'</span>' : '');
+    return '<button class="daycard" data-key="'+esc(x.key)+'">'+
+      '<div class="grow"><div class="d">'+x.date.replace(/-/g,'.')+' ('+wd+')'+tag+'</div>'+
       '<div class="meta">'+x.items.length+'단어 · まだ '+learn+' · よし '+known+(nw?' · 미분류 '+nw:'')+'</div></div>'+
+      '<span class="bt" data-bm="'+esc(x.key)+'" style="cursor:pointer;padding:6px 10px">⋯</span>'+
       '<span class="badge learn">▶ 학습</span></button>';
   };
 
@@ -1006,10 +1058,13 @@ function renderHome(){
     const learn=m.items.filter(w=>w.status==='learn').length;
     const known=m.items.filter(w=>w.status==='known').length;
     const open=isOpen(m.key);
+    /* m.days 는 이제 «묶음» 배열이다. 날짜 수는 따로 센다 (v3.5) */
+    const dayN=new Set(m.days.map(x=>x.date)).size;
+    const batchN=m.days.length;
     return '<button class="monthhead'+(open?' open':'')+'" data-month="'+m.key+'">'+
         '<span class="chev">▶</span>'+
         '<span class="grow"><span class="mtitle">'+y+'년 '+Number(mo)+'월</span>'+
-        '<div class="mmeta">'+[m.days.length+'일', m.items.length+'단어',
+        '<div class="mmeta">'+[dayN+'일', (batchN>dayN? batchN+'묶음':''), m.items.length+'단어',
             (learn?'まだ '+learn:''), (known?'よし '+known:'')
           ].filter(Boolean).join(' · ')+'</div></span>'+
         '<span class="mgo" data-mgo="'+m.key+'">▶ 이 달 학습</span>'+
@@ -1017,7 +1072,11 @@ function renderHome(){
       '<div class="monthbody'+(open?' on':'')+'" data-body="'+m.key+'">'+m.days.map(dayCard).join('')+'</div>';
   }).join('');
 
-  $$('#dayList .daycard').forEach(b=>b.onclick=()=>{ openStart(b.dataset.date); });
+  $$('#dayList .daycard').forEach(b=>b.onclick=e=>{
+    const bm=e.target.closest('[data-bm]');
+    if(bm){ openBatchSheet(bm.dataset.bm); return; }   /* ⋯ 는 묶음 설정 */
+    openStart(b.dataset.key);
+  });
   $$('#dayList .monthhead').forEach(h=>h.onclick=e=>{
     const go=e.target.closest('[data-mgo]');
     if(go){ openStart(null, go.dataset.mgo); return; }   /* 이 달 전체 학습 */
@@ -1049,11 +1108,11 @@ function filteredWords(){
 function renderList(){
   const arr=filteredWords(), box=$('#wordList');
   if(!arr.length){box.innerHTML='<div class="empty">해당하는 단어가 없습니다.</div>';return;}
-  const g={}; arr.forEach(w=>{(g[w.date]=g[w.date]||[]).push(w);});
+  const g={}; arr.forEach(w=>{ const k=bkey(w); (g[k]=g[k]||[]).push(w); });
   const sel=selMode;
   box.innerHTML=Object.keys(g).sort().reverse().map(d=>
-    '<div class="datehead'+(sel?' dsel" data-dsel="'+d+'':'')+'">'+d.replace(/-/g,'.')+
-      ' <span class="n">'+g[d].length+'개'+(sel?' · 이 날짜 전체':'')+'</span></div><div class="wlist">'+
+    '<div class="datehead'+(sel?' dsel" data-dsel="'+d+'':'')+'">'+esc(blabelKey(d,true))+
+      ' <span class="n">'+g[d].length+'개'+(sel?' · 이 묶음 전체':'')+'</span></div><div class="wlist">'+
     g[d].map(w=>{
       const on=sel&&selSet.has(w.id);
       return '<div class="witem'+(on?' sel':'')+'" data-id="'+w.id+'">'+
@@ -1113,18 +1172,69 @@ function makeWord(o){
     exCount:Math.max(0,parseInt(o.exCount,10)||0),
     exTarget:Math.max(0,parseInt(o.exTarget,10)||0),   /* 0 = 설정의 기본값을 따름 */
     exHist:(o.exHist&&typeof o.exHist==='object')?o.exHist:{},
+    /* 묶음 — 옛 백업에는 없으므로 1번으로 읽힌다 (v3.5) */
+    batch:Math.max(1,parseInt(o.batch,10)||1),
+    bname:String(o.bname||'').trim().slice(0,30),
     status:o.status||'new',fav:!!o.fav,date:o.date||todayStr(),ts:Date.now(),seen:0};
 }
-/* 같은 날짜의 같은 단어는 다시 넣지 않는다 (같은 파일을 두 번 불러와도 안전) */
+/* ── 묶음 (v3.5) ────────────────────────────────────
+   같은 날 여러 번 넣으면 한 뭉치로 섞여 어느 자료에서 왔는지 알 수 없었다.
+   ⚠ date 는 «진짜 날짜»로 둔다. 편집 시트의 <input type="date"> 가 받지 못하고
+      백업의 date 가 날짜가 아니게 되므로, 번호는 따로 센다.                */
+function bnum(w){ return Math.max(1, parseInt(w&&w.batch,10)||1); }
+/* 1번 묶음은 날짜만 쓴다 — 묶음을 안 쓰던 옛 데이터와 같은 키가 된다 */
+function bkeyOf(date,batch){ const n=Math.max(1,parseInt(batch,10)||1); return (date||'')+(n>1?'#'+n:''); }
+function bkey(w){ return bkeyOf(w&&w.date, bnum(w)); }
+function bparse(k){
+  const t=String(k||''), i=t.indexOf('#');
+  return i<0? {date:t,batch:1} : {date:t.slice(0,i), batch:Math.max(1,parseInt(t.slice(i+1),10)||1)};
+}
+/* 그 묶음에 붙은 이름. 묶음 안 아무 단어나 갖고 있으면 그것을 쓴다 */
+function bnameOf(date,batch){
+  const n=Math.max(1,parseInt(batch,10)||1);
+  const w=S.words.find(x=>x.date===date && bnum(x)===n && String(x.bname||'').trim());
+  return w? String(w.bname).trim() : '';
+}
+/* 화면 표기. dots=true 면 2026.09.29 처럼 점으로 */
+/* force=true 면 1번에도 번호를 붙인다 — 같은 날 묶음이 여럿이면
+   1번만 표시가 없어 «이건 뭐지» 하게 된다 */
+function blabel(date,batch,name,dots,force){
+  const d=dots? String(date||'').replace(/-/g,'.') : (date||'');
+  const n=Math.max(1,parseInt(batch,10)||1);
+  return name? (d+' · '+name) : (d+((n>1||force)?' ('+n+')':''));
+}
+function blabelOf(w,dots){ return blabel(w.date, bnum(w), bnameOf(w.date,bnum(w)), dots); }
+function blabelKey(k,dots){
+  const p=bparse(k);
+  return blabel(p.date,p.batch,bnameOf(p.date,p.batch),dots, bnumsOf(p.date).length>1);
+}
+/* 그 날짜에 쓰인 묶음 번호들 */
+function bnumsOf(date){ return [...new Set(S.words.filter(w=>w.date===date).map(bnum))].sort((a,b)=>a-b); }
+/* 번호를 1부터 다시 매긴다. 합치기 뒤에만 부른다 —
+   삭제 뒤에 부르면 «되돌리기»로 살아난 단어의 번호가 어긋난다 */
+function brenumber(date){
+  const nums=bnumsOf(date); const map={};
+  nums.forEach((n,i)=>map[n]=i+1);
+  S.words.forEach(w=>{ if(w.date===date) w.batch=map[bnum(w)]||1; });
+}
+
+/* 같은 날짜의 같은 단어는 다시 넣지 않는다 (묶음이 달라도 마찬가지 —
+   이 앱은 자료 보관함이 아니라 학습 도구라 퀴즈에 두 번 나오면 안 된다) */
 function wkey(w){ return stripRuby(w.word||'').trim()+'|'+(w.date||''); }
 function addWords(arr,quiet){
   if(!arr.length){ if(!quiet) toast('추가할 단어를 찾지 못했습니다.'); return 0; }
   const have=new Set(S.words.map(wkey)), seen=new Set(), fresh=[];
   arr.forEach(w=>{ const k=wkey(w); if(!stripRuby(w.word||'').trim()) return; if(have.has(k)||seen.has(k)) return; seen.add(k); fresh.push(w); });
   const dup=arr.length-fresh.length;
-  if(!fresh.length){ if(!quiet) toast('이미 등록된 단어입니다 (중복 '+dup+'개 제외).'); return 0; }
+  /* 왜 걸렸는지 밝힌다. 묶음이 갈린 뒤로는 «다른 묶음에 있다»가 흔한 사유다 (v3.5) */
+  const other=arr.filter(w=>{
+    const old=S.words.find(x=>wkey(x)===wkey(w));
+    return old && bnum(old)!==bnum(w);
+  }).length;
+  const why=other? ' · 그중 '+other+'개는 같은 날 다른 묶음에 이미 있습니다':'';
+  if(!fresh.length){ if(!quiet) toast('이미 등록된 단어입니다 (중복 '+dup+'개 제외)'+why+'.',null,other?6000:3500); return 0; }
   S.words=S.words.concat(fresh); save();
-  if(!quiet) toast(fresh.length+'개 추가'+(dup?' · 중복 '+dup+'개 제외':'')+'했습니다.');
+  if(!quiet) toast(fresh.length+'개 추가'+(dup?' · 중복 '+dup+'개 제외':'')+'했습니다.'+why,null,other?6000:3500);
   renderHome();
   return fresh.length;
 }
@@ -1478,9 +1588,11 @@ bindSeg('#optScope','scope',()=>{
 });
 bindSeg('#optOrder','order');
 bindSeg('#optQuiz','quiz');
+/* date 자리에는 이제 «묶음 키»가 들어온다 (2026-09-29 또는 2026-09-29#2) */
 function openStart(date, month){
-  const dates=[...new Set(S.words.map(w=>w.date))].sort().reverse();
-  $('#scopeDate').innerHTML=dates.map(d=>'<option value="'+d+'">'+d.replace(/-/g,'.')+' ('+S.words.filter(w=>w.date===d).length+')</option>').join('');
+  const keys=[...new Set(S.words.map(bkey))].sort().reverse();
+  $('#scopeDate').innerHTML=keys.map(k=>'<option value="'+esc(k)+'">'+esc(blabelKey(k,true))+
+      ' ('+S.words.filter(w=>bkey(w)===k).length+')</option>').join('');
   const months=[...new Set(S.words.map(w=>(w.date||'').slice(0,7)))].filter(Boolean).sort().reverse();
   $('#scopeMonth').innerHTML=months.map(m=>{
     const [y,mo]=m.split('-');
@@ -1504,7 +1616,7 @@ $('#btnStartGo').onclick=()=>{
   opt.date=$('#scopeDate').value||opt.date;
   opt.month=$('#scopeMonth').value||opt.month;
   let pool=S.words.slice();
-  if(opt.scope==='date') pool=pool.filter(w=>w.date===opt.date);
+  if(opt.scope==='date') pool=pool.filter(w=>bkey(w)===opt.date);
   if(opt.scope==='month') pool=pool.filter(w=>(w.date||'').slice(0,7)===opt.month);
   if(opt.status!=='all') pool=pool.filter(w=>w.status===opt.status);
   if($('#optFav').checked) pool=pool.filter(w=>w.fav);
@@ -3150,6 +3262,26 @@ async function sendToClaude(s){
 
 /* ---------- 확인 화면 ---------- */
 let revShot=null, revItems=[], revFrom='shot', revSrc=null;
+let revJoin=false;          /* true 면 직전 묶음에 이어 넣는다 (v3.5) */
+
+/* 날짜가 바뀔 때마다 다시 그린다 — 그 날짜에 묶음이 있어야 «이어 넣기»가 뜬다 */
+function paintRevBatch(){
+  const d=$('#revDate').value||todayStr();
+  const nums=bnumsOf(d);
+  const last=nums.length? nums[nums.length-1] : 0;
+  if(!last){
+    revJoin=false;
+    $('#revBatchWrap').style.display='none';
+  }else{
+    $('#revBatchWrap').style.display='';
+    $('#revJoinBtn').textContent='이어 넣기 — '+blabel(d,last,bnameOf(d,last),true,true);
+  }
+  $$('#revJoinSeg button').forEach(b=>b.classList.toggle('on', (b.dataset.j==='1')===revJoin));
+  /* 이어 넣을 때는 이름을 새로 받지 않는다. 그 묶음이 이미 이름을 갖고 있다 */
+  $('#revNameWrap').style.display = revJoin? 'none':'';
+}
+$('#revDate').addEventListener('change',()=>{ revJoin=false; paintRevBatch(); });
+$$('#revJoinSeg button').forEach(b=>b.onclick=()=>{ revJoin=(b.dataset.j==='1'); paintRevBatch(); });
 function updRevCount(){ $('#revCount').textContent=revItems.filter(x=>x.on).length+'개 선택'; }
 function openReview(s){
   /* 지문에서 온 것은 «사진»이 아니다. 끝나고 사진을 지우면 안 된다 (v3.3) */
@@ -3160,6 +3292,7 @@ function openReview(s){
   const guess=(s.result||[]).map(o=>o&&o.date).filter(Boolean)[0];
   $('#revDate').value=guess||s.date||todayStr();
   $('#revTitle').textContent = revFrom==='text' ? '지문에서 뽑은 단어' : '인식 결과 확인';
+  $('#revBname').value=''; revJoin=false; paintRevBatch();
   renderReview();
   $('#reviewSheet').classList.add('on');
 }
@@ -3214,7 +3347,12 @@ $('#revAdd').onclick=()=>{
   }
   /* 확인 화면에서 사용자가 눈으로 보고 정한 날짜가 우선한다 */
   const d=$('#revDate').value||todayStr();
-  const n=addWords(sel.map(x=>makeWord(Object.assign({},x.w,{date:d}))));
+  /* 묶음 번호 — 이어 넣기면 마지막 묶음, 아니면 그 다음 번호 (v3.5) */
+  const nums=bnumsOf(d);
+  const last=nums.length? nums[nums.length-1] : 0;
+  const batch=(revJoin && last)? last : last+1;
+  const bname=revJoin? bnameOf(d,batch) : $('#revBname').value.trim().slice(0,30);
+  const n=addWords(sel.map(x=>makeWord(Object.assign({},x.w,{date:d,batch:batch,bname:bname}))));
   $('#reviewSheet').classList.remove('on');
   if(revShot) dropShot(revShot.id);
   const fromText = revFrom==='text';
@@ -3222,6 +3360,64 @@ $('#revAdd').onclick=()=>{
   /* 지문에서 뽑았으면 읽던 자리로 돌려보낸다. 홈으로 튕기면 흐름이 끊긴다 */
   if(n && !fromText) go('home');
 };
+
+/* ── 묶음 설정 (v3.5) ────────────────────────────────
+   이름을 나중에 붙이고 싶어지는 일이 있고, 한 자료를 나눠 찍어 묶음이
+   쪼개지는 일도 있다. 둘 다 여기서 고친다. */
+let bmKey=null;
+function openBatchSheet(key){
+  const p=bparse(key);
+  const items=S.words.filter(w=>bkey(w)===key);
+  if(!items.length){ toast('그 묶음을 찾지 못했습니다.'); return; }
+  bmKey=key;
+  const name=bnameOf(p.date,p.batch);
+  $('#bmWho').textContent=blabel(p.date,p.batch,name,true,true)+' · '+items.length+'단어';
+  $('#bmName').value=name;
+
+  /* 같은 날의 다른 묶음만 합칠 수 있다. 날짜를 옮기는 것은 단어 편집에서 한다 */
+  const others=bnumsOf(p.date).filter(n=>n!==p.batch);
+  if(!others.length){
+    $('#bmMergeWrap').style.display='none';
+  }else{
+    $('#bmMergeWrap').style.display='';
+    $('#bmTarget').innerHTML=others.map(n=>{
+      const k=bkeyOf(p.date,n);
+      return '<option value="'+esc(k)+'">'+esc(blabel(p.date,n,bnameOf(p.date,n),true,true))+
+             ' · '+S.words.filter(w=>bkey(w)===k).length+'단어</option>';
+    }).join('');
+  }
+  $('#bmSheet').classList.add('on');
+}
+function closeBatchSheet(){ $('#bmSheet').classList.remove('on'); bmKey=null; }
+
+$('#bmSave').onclick=()=>{
+  if(!bmKey) return;
+  const p=bparse(bmKey), nm=$('#bmName').value.trim().slice(0,30);
+  let n=0;
+  S.words.forEach(w=>{ if(bkey(w)===bmKey){ w.bname=nm; n++; } });
+  if(!n){ toast('그 묶음을 찾지 못했습니다.'); return; }
+  save(); renderAllLists(); closeBatchSheet();
+  toast(nm? '묶음 이름을 「'+nm+'」로 했습니다.' : '묶음 이름을 지웠습니다.');
+};
+
+$('#bmMerge').onclick=()=>{
+  if(!bmKey) return;
+  const from=bmKey, to=$('#bmTarget').value;
+  if(!to||to===from) return;
+  const p=bparse(from), q=bparse(to);
+  const moving=S.words.filter(w=>bkey(w)===from);
+  if(!moving.length) return;
+  const toName=bnameOf(q.date,q.batch);
+  if(!confirm('「'+blabel(p.date,p.batch,bnameOf(p.date,p.batch),true,true)+'」의 '+moving.length+'단어를\n'+
+              '「'+blabel(q.date,q.batch,toName,true,true)+'」로 옮길까요?\n\n'+
+              '묶음 번호가 1부터 다시 매겨집니다. 되돌릴 수 없습니다.')) return;
+  moving.forEach(w=>{ w.batch=q.batch; w.bname=toName; });
+  brenumber(q.date);
+  save(); renderAllLists(); closeBatchSheet();
+  toast(moving.length+'단어를 합쳤습니다.');
+};
+$('#bmClose').onclick=closeBatchSheet;
+$('#bmSheet').onclick=e=>{ if(e.target.id==='bmSheet') closeBatchSheet(); };
 
 /* ---------- 촬영 버튼 ---------- */
 $('#btnShoot').onclick=()=>$('#camInput').click();

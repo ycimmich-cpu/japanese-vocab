@@ -290,6 +290,24 @@
   .sline{font-family:var(--jp);font-size:19px;line-height:2.15;padding:11px 14px;border-radius:14px;
          background:var(--panel);box-shadow:var(--shadow);margin-bottom:8px;width:100%;text-align:left;display:block}
   .sline ruby rt{font-size:11px;color:var(--sub);font-weight:500}
+  /* 해석 — 스위치를 켜면 보인다 (v3.3) */
+  .sline .ko{display:none;font-family:"Pretendard","Malgun Gothic",sans-serif;
+             font-size:13px;line-height:1.65;color:var(--sub);
+             margin-top:5px;padding-top:6px;border-top:1px dashed var(--line)}
+  #rdLines.showko .sline .ko{display:block}
+  .sline.on .ko{color:var(--accent-ink);opacity:.8;border-top-color:rgba(255,255,255,.25)}
+  /* 스위치 */
+  .swrow{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .sw{display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;font-weight:700;
+      background:var(--panel);box-shadow:var(--shadow);border-radius:999px;padding:7px 14px 7px 11px}
+  .sw input{position:absolute;opacity:0;width:0;height:0}
+  .sw .track{width:38px;height:22px;border-radius:999px;background:var(--line);position:relative;
+             transition:background .18s;flex:none}
+  .sw .track::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;
+                    background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .18s}
+  .sw input:checked + .track{background:var(--ok)}
+  .sw input:checked + .track::after{transform:translateX(16px)}
+  .sw input:focus-visible + .track{outline:2px solid var(--ink);outline-offset:2px}
   .sline.on{background:var(--ink);color:var(--accent-ink)}
   .sline.on ruby rt{color:var(--accent-ink);opacity:.75}
   .sline:active{transform:scale(.995)}
@@ -643,6 +661,14 @@
         <button class="btn sm grow" id="rdPlayAll">▶ 전체 듣기</button>
         <button class="btn sm" id="rdStop">■ 멈춤</button>
       </div>
+      <div class="swrow">
+        <label class="sw" id="rdKoSw" style="display:none">
+          <input type="checkbox" id="rdKo"><span class="track"></span>해석
+        </label>
+        <button class="btn sm" id="rdMakeKo" style="display:none">해석 만들기</button>
+        <div class="grow"></div>
+        <button class="btn sm" id="rdPick">＋ 단어 뽑기</button>
+      </div>
       <div class="hint" style="margin-bottom:10px">문장을 탭하면 그 문장만 읽어 줍니다. 한 번 소리 내어 읽었으면 아래 <b>읽음</b>을 눌러 주세요.</div>
       <div id="rdLines"></div>
     </div>
@@ -748,7 +774,7 @@
 
 <!-- 인식 결과 확인 시트 -->
 <div class="sheet" id="reviewSheet"><div class="inner">
-  <h3>인식 결과 확인</h3>
+  <h3 id="revTitle">인식 결과 확인</h3>
   <div class="hint" style="margin-bottom:10px">등록할 단어만 남기고 체크를 풀어 주세요. 등록한 뒤에도 단어장에서 고칠 수 있습니다.</div>
   <div class="row" style="gap:8px;margin-bottom:10px">
     <button class="btn sm" id="revAll">전체 선택</button>
@@ -785,14 +811,14 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v3.2';
+const APP_VER='v3.3';
 const APP_DATE='2026-09-08';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
 const KEY='jvocab.v1';
 const DEF_SET={voice:'',rate:0.9,autoSpeak:true,autoSpeakEx:false,autoAdvance:false,advSec:7,hideMeaning:false,
                readTarget:100, lblSeen:0, lblIntro:0, kvgNum:false, kvgIntro:0,
-               exTarget:10, exGap:1.5};
+               exTarget:10, exGap:1.5, rdKo:false};
 let S={words:[],texts:[],settings:Object.assign({},DEF_SET),installed:[]};
 function load(){
     try{const r=localStorage.getItem(KEY); if(r){const o=JSON.parse(r); S.words=o.words||[]; S.texts=(o.texts||[]).map(normText); S.settings=Object.assign({},DEF_SET,o.settings||{}); S.installed=o.installed||[];}}
@@ -3106,20 +3132,26 @@ async function sendToClaude(s){
 }
 
 /* ---------- 확인 화면 ---------- */
-let revShot=null, revItems=[];
+let revShot=null, revItems=[], revFrom='shot', revSrc=null;
 function updRevCount(){ $('#revCount').textContent=revItems.filter(x=>x.on).length+'개 선택'; }
 function openReview(s){
-  revShot=s;
+  /* 지문에서 온 것은 «사진»이 아니다. 끝나고 사진을 지우면 안 된다 (v3.3) */
+  revShot = (s && s.from==='text') ? null : s;
+  revFrom = (s && s.from) || 'shot';
+  revSrc  = s;
   revItems=((s.result||[]).filter(o=>o&&stripRuby(o.word||'').trim())).map(o=>({on:true,w:o}));
   const guess=(s.result||[]).map(o=>o&&o.date).filter(Boolean)[0];
   $('#revDate').value=guess||s.date||todayStr();
+  $('#revTitle').textContent = revFrom==='text' ? '지문에서 뽑은 단어' : '인식 결과 확인';
   renderReview();
   $('#reviewSheet').classList.add('on');
 }
 function renderReview(){
   const box=$('#revList');
   if(!revItems.length){
-    box.innerHTML='<div class="empty"><div class="big">🔍</div>이 사진에서는 단어를 찾지 못했습니다.<br>글자가 크고 밝게 나오도록 다시 찍어 보세요.</div>';
+    box.innerHTML = revFrom==='text'
+      ? '<div class="empty"><div class="big">🔍</div>이 지문에서는 담을 단어를 찾지 못했습니다.</div>'
+      : '<div class="empty"><div class="big">🔍</div>이 사진에서는 단어를 찾지 못했습니다.<br>글자가 크고 밝게 나오도록 다시 찍어 보세요.</div>';
     updRevCount(); return;
   }
   box.innerHTML=revItems.map((it,i)=>{
@@ -3150,7 +3182,12 @@ function revSetAll(v){
 }
 $('#revAll').onclick=()=>revSetAll(true);
 $('#revNone').onclick=()=>revSetAll(false);
-$('#revCancel').onclick=()=>{ $('#reviewSheet').classList.remove('on'); revShot=null; renderShots(); };
+$('#revCancel').onclick=()=>{
+  $('#reviewSheet').classList.remove('on');
+  const fromText = revFrom==='text';
+  revShot=null; revSrc=null; revFrom='shot';
+  if(!fromText) renderShots();
+};
 $('#revAdd').onclick=()=>{
   const sel=revItems.filter(x=>x.on);
   if(!sel.length){
@@ -3163,8 +3200,10 @@ $('#revAdd').onclick=()=>{
   const n=addWords(sel.map(x=>makeWord(Object.assign({},x.w,{date:d}))));
   $('#reviewSheet').classList.remove('on');
   if(revShot) dropShot(revShot.id);
-  revShot=null;
-  if(n) go('home');
+  const fromText = revFrom==='text';
+  revShot=null; revSrc=null; revFrom='shot';
+  /* 지문에서 뽑았으면 읽던 자리로 돌려보낸다. 홈으로 튕기면 흐름이 끊긴다 */
+  if(n && !fromText) go('home');
 };
 
 /* ---------- 촬영 버튼 ---------- */
@@ -3254,6 +3293,8 @@ function normText(o){
               .map(s=>String(s||'').trim()).filter(Boolean);
   return {id:o.id||uid(), title:String(o.title||'').trim()||'제목 없음', date:o.date||todayStr(),
           lines:lines, target:Math.max(1,parseInt(o.target,10)||100),
+          /* 문장별 한국어 해석. 옛 백업에는 없으므로 빈 배열로 채운다 (v3.3) */
+          trans:Array.isArray(o.trans)?o.trans.map(x=>String(x||'')):[],
           count:Math.max(0,parseInt(o.count,10)||0), hist:(o.hist&&typeof o.hist==='object')?o.hist:{},
           ts:o.ts||Date.now()};
 }
@@ -3347,11 +3388,35 @@ function renderRead(){
     : (today? '오늘 '+today+'회 · '+(t.target-t.count)+'회 남음' : (t.target-t.count)+'회 남음');
   $('#rdUndo').style.visibility = t.count? 'visible':'hidden';
   $('#rdLines').innerHTML=t.lines.map((l,i)=>
-    '<button class="sline" data-i="'+i+'">'+ruby(l)+'</button>').join('');
+    '<button class="sline" data-i="'+i+'"><span class="jp">'+ruby(l)+'</span>'+
+    (hasTrans(t)&&t.trans[i]? '<span class="ko">'+esc(t.trans[i])+'</span>':'')+
+    '</button>').join('');
   $('#rdLines').querySelectorAll('.sline').forEach(b=>b.onclick=()=>playOne(+b.dataset.i));
+  paintKo();
 }
-function hlLine(i){
-  $$('#rdLines .sline').forEach((el,k)=>el.classList.toggle('on',k===i));
+/* 해석이 문장 수만큼 갖춰졌는가. 일부만 있으면 «만들기»를 다시 보여 준다 */
+function hasTrans(t){
+  return !!(t && Array.isArray(t.trans) && t.trans.length===t.lines.length
+            && t.trans.some(x=>String(x||'').trim()));
+}
+function paintKo(){
+  const t=curText; if(!t) return;
+  const has=hasTrans(t);
+  $('#rdKoSw').style.display   = has? '':'none';
+  $('#rdMakeKo').style.display = has? 'none':'';
+  const on=!!S.settings.rdKo;
+  $('#rdKo').checked=on;
+  $('#rdLines').classList.toggle('showko', has&&on);
+}
+/* follow=true 면 지금 읽는 문장을 화면 가운데로 끌어온다.
+   문장을 직접 탭했을 때(playOne)는 이미 보고 있으므로 화면을 건드리지 않는다. */
+function hlLine(i, follow){
+  const els=$$('#rdLines .sline');
+  els.forEach((el,k)=>el.classList.toggle('on',k===i));
+  if(follow && i>=0 && els[i]){
+    try{ els[i].scrollIntoView({block:'center', behavior:'smooth'}); }
+    catch(e){ els[i].scrollIntoView(); }   /* 옵션을 모르는 옛 브라우저 */
+  }
 }
 function stopRead(){
   rdToken++;
@@ -3375,7 +3440,7 @@ function playAll(){
     if(my!==rdToken) return;              /* 멈췄거나 다른 재생이 시작됨 */
     if(i>=lines.length){ hlLine(-1); return; }
     const k=i++;
-    hlLine(k);
+    hlLine(k, true);
     speak(lines[k], ()=>{ if(my===rdToken) setTimeout(step,220); });
   };
   step();
@@ -3394,6 +3459,66 @@ function readMinus(){
   if(t.hist&&t.hist[d]){ t.hist[d]--; if(!t.hist[d]) delete t.hist[d]; }
   save(); renderRead();
 }
+/* ── 해석 만들기 (v3.3) ──────────────────────────────
+   지문을 등록할 때가 아니라 «필요할 때» 만든다. 옛 지문도 되고,
+   안 볼 지문의 해석에 돈을 쓰지 않는다. 한 지문에 API 1회.      */
+const TRANS_PROMPT = [
+'아래 일본어 문장들을 한국어로 옮겨 줘.',
+'',
+'규칙',
+'- 입력한 문장과 **같은 개수**의 문자열 배열로만 출력할 것',
+'- 순서를 그대로 지킬 것. 문장을 합치거나 나누지 말 것',
+'- 일본어를 배우는 사람이 원문과 맞춰 볼 것이므로, 매끄러운 의역보다',
+'  원문의 구조가 비치는 자연스러운 우리말로 옮길 것',
+'- 설명 없이 JSON 배열만 출력할 것',
+'',
+'예: ["봄이 되었습니다.", "꽃이 피었습니다."]'
+].join('\n');
+
+async function makeTrans(){
+  const t=curText; if(!t||!t.lines.length) return;
+  if(!AI.key||!AI.model){ toast('설정에서 Claude API 키를 먼저 넣어 주세요.'); go('settings'); return; }
+  const btn=$('#rdMakeKo'); btn.disabled=true; btn.textContent='만드는 중…';
+  try{
+    const body=t.lines.map((l,i)=>(i+1)+'. '+stripRuby(l)).join('\n');
+    const arr=await aiJson([], TRANS_PROMPT+'\n\n'+body);
+    if(!Array.isArray(arr)) throw new Error('결과를 이해하지 못했습니다.');
+    if(arr.length!==t.lines.length)
+      throw new Error('문장 수가 맞지 않습니다 ('+t.lines.length+'문장인데 '+arr.length+'개). 다시 시도해 주세요.');
+    t.trans=arr.map(x=>String(x||'').trim());
+    S.settings.rdKo=true;              /* 방금 만들었으니 켜서 보여 준다 */
+    save(); renderRead();
+    toast(t.lines.length+'문장의 해석을 만들었습니다.');
+  }catch(e){
+    toast(e.message||'해석을 만들지 못했습니다.');
+  }finally{
+    btn.disabled=false; btn.textContent='해석 만들기';
+  }
+}
+
+/* ── 지문에서 단어 뽑기 (v3.3) ───────────────────────
+   사진 인식과 같은 확인 시트로 보낸다. 고르고 날짜를 정하는 자리가 이미 있다. */
+async function pickWordsFromText(){
+  const t=curText; if(!t||!t.lines.length) return;
+  if(!AI.key||!AI.model){ toast('설정에서 Claude API 키를 먼저 넣어 주세요.'); go('settings'); return; }
+  const btn=$('#rdPick'); btn.disabled=true; btn.textContent='뽑는 중…';
+  try{
+    const body='자료 (지문 「'+stripRuby(t.title)+'」)\n'+t.lines.map(l=>stripRuby(l)).join('\n');
+    const arr=await aiJson([], CLAUDE_PROMPT+'\n\n'+body);
+    if(!Array.isArray(arr)) throw new Error('결과를 이해하지 못했습니다.');
+    const items=arr.filter(o=>o&&stripRuby(o.word||'').trim());
+    if(!items.length){ toast('이 지문에서 단어를 찾지 못했습니다.'); return; }
+    openReview({id:null, from:'text', date:t.date, result:items});
+  }catch(e){
+    toast(e.message||'단어를 뽑지 못했습니다.');
+  }finally{
+    btn.disabled=false; btn.textContent='＋ 단어 뽑기';
+  }
+}
+
+$('#rdKo').onchange=e=>{ S.settings.rdKo=e.target.checked; save(); paintKo(); };
+$('#rdMakeKo').onclick=makeTrans;
+$('#rdPick').onclick=pickWordsFromText;
 $('#rdBack').onclick=()=>{ stopRead(); go('sent'); };
 $('#rdPlayAll').onclick=playAll;
 $('#rdStop').onclick=stopRead;

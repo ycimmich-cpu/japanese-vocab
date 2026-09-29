@@ -796,7 +796,11 @@
     <div class="grow"></div>
     <span class="pill" id="revCount">0개</span>
   </div>
-  <div class="field"><label>등록 날짜</label><input type="date" id="revDate"></div>
+  <div class="field" style="margin-bottom:6px"><label>등록 날짜</label><input type="date" id="revDate"></div>
+  <div class="row" style="gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+    <button class="btn sm" id="revDateToday">오늘</button>
+    <button class="btn sm" id="revDateOld" style="display:none"></button>
+  </div>
   <div id="revBatchWrap" style="display:none;margin-bottom:10px">
     <label class="f" style="display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:5px">이 날짜에 이미 넣은 것이 있습니다</label>
     <div class="seg2" id="revJoinSeg">
@@ -853,7 +857,7 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v3.6';
+const APP_VER='v3.7';
 const APP_DATE='2026-09-08';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
@@ -886,6 +890,22 @@ function toast(m,onTap,ms){
 }
 function todayStr(d){const x=d?new Date(d):new Date();return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+
+/* ── 날짜 칸은 «오늘»로 열린다 (v3.7) ─────────────────────
+   ⚠ 예전에는 앱을 시작할 때 딱 한 번만 채웠다. PWA 는 며칠씩 열어 둔 채로 쓰므로
+   «처음 연 날»이 그대로 굳어 「오늘이 9월 4일」이 됐다.
+   화면을 열 때마다, 그리고 앱으로 돌아올 때마다 다시 채운다.
+   손으로 고쳐 둔 날짜는 건드리지 않는다 — 비었거나 «지난 오늘»일 때만 바꾼다. */
+const DATE_FIELDS=['#pasteDate','#fDate','#fileDate','#sentDate','#camDate'];
+let dateStamp='';
+function stampToday(force){
+  const t=todayStr();
+  DATE_FIELDS.forEach(sel=>{
+    const el=$(sel); if(!el) return;
+    if(force || !el.value || el.value===dateStamp) el.value=t;
+  });
+  dateStamp=t;
+}
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 const POS_KO={n:'명사',v:'동사',a:'い형용사',na:'な형용사',ad:'부사',e:'표현'};
 
@@ -983,7 +1003,7 @@ function go(name){
   if(name==='list') renderList();
   if(name==='sent') renderTexts();
   if(name==='settings') renderSettings();
-  if(name==='add'){ syncAddMode(); if(typeof renderShots==='function') renderShots(); }
+  if(name==='add'){ stampToday(); syncAddMode(); if(typeof renderShots==='function') renderShots(); }
   window.scrollTo(0,0);
 }
 window.go=go;
@@ -3011,7 +3031,7 @@ const _ins=installPacks(true);   /* 내장 단어팩 자동 등록 (처음 1회)
 const VER_TEXT=APP_NAME+' '+APP_VER+' · '+APP_DATE;
 $$('.verline').forEach(el=>el.textContent=VER_TEXT);
 document.title=APP_NAME+' '+APP_VER;
-['#pasteDate','#fDate','#fileDate','#sentDate'].forEach(s=>{ const el=$(s); if(el) el.value=todayStr(); });
+stampToday(true);   /* 날짜 칸 — 여기서 한 번, 그 뒤로는 화면을 열 때마다 (v3.7) */
 renderHome();
 renderTexts();
 syncTabs();
@@ -3294,6 +3314,23 @@ $('#revDate').addEventListener('change',()=>{ revJoin=false; paintRevBatch(); })
   });
 });
 $$('#revJoinSeg button').forEach(b=>b.onclick=()=>{ revJoin=(b.dataset.j==='1'); paintRevBatch(); });
+/* 자료에서 읽힌 날짜가 오늘과 다를 때만 버튼으로 내민다 (v3.7) */
+function paintRevOld(g){
+  const b=$('#revDateOld'); if(!b) return;
+  if(g && g!==todayStr()){
+    b.style.display=''; b.dataset.d=g;
+    b.textContent='자료의 날짜 '+String(g).replace(/-/g,'.');
+  }else{
+    b.style.display='none'; b.dataset.d='';
+  }
+}
+function setRevDate(d){
+  if(!d) return;
+  $('#revDate').value=d; revJoin=false; paintRevBatch();
+}
+$('#revDateToday').onclick=()=>setRevDate(todayStr());
+$('#revDateOld').onclick=e=>setRevDate(e.currentTarget.dataset.d);
+
 function updRevCount(){ $('#revCount').textContent=revItems.filter(x=>x.on).length+'개 선택'; }
 function openReview(s){
   /* 지문에서 온 것은 «사진»이 아니다. 끝나고 사진을 지우면 안 된다 (v3.3) */
@@ -3301,8 +3338,13 @@ function openReview(s){
   revFrom = (s && s.from) || 'shot';
   revSrc  = s;
   revItems=((s.result||[]).filter(o=>o&&stripRuby(o.word||'').trim())).map(o=>({on:true,w:o}));
-  const guess=(s.result||[]).map(o=>o&&o.date).filter(Boolean)[0];
-  $('#revDate').value=guess||s.date||todayStr();
+  /* ⚠ 등록 날짜는 «오늘»이 기본이다 (v3.7)
+     전에는 모델이 돌려준 날짜나 사진을 찍을 때의 날짜로 덮어썼다. 그 값이 며칠 전이면
+     손으로 고쳐도 시트를 다시 열 때마다 되돌아가 「고쳐도 안 된다」로 보였다.
+     자료에서 읽힌 날짜는 버리지 않고, 한 번 눌러 쓰는 버튼으로 옆에 내민다. */
+  const guess=(s.result||[]).map(o=>o&&o.date).filter(Boolean)[0] || (s&&s.date) || '';
+  $('#revDate').value=todayStr();
+  paintRevOld(guess);
   $('#revTitle').textContent = revFrom==='text' ? '지문에서 뽑은 단어' : '인식 결과 확인';
   $('#revBname').value=''; revJoin=false; paintRevBatch();
   renderReview();
@@ -3495,7 +3537,7 @@ $('#btnAiSave').onclick=async ()=>{
 
 /* ---------- 시작 ---------- */
 loadAI(); loadShots();
-{ const el=$('#camDate'); if(el) el.value=todayStr(); }
+stampToday(true);   /* 사진 화면의 «수업 날짜»도 같이 (v3.7) */
 renderShots();
 window.addEventListener('online',()=>{ renderShots(); runQueue(); });
 window.addEventListener('offline',renderShots);
@@ -4245,6 +4287,10 @@ function markBusy(on){
     });
   }
 })();
+/* 자정을 넘겨 앱으로 돌아왔을 때 날짜가 어제로 남아 있으면 안 된다 (v3.7) */
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) stampToday(); });
+window.addEventListener('focus',()=>stampToday());
+
 document.addEventListener('keydown',e=>{
   if(!$('#studyScreen').classList.contains('on')||!ses) return;
   if($('.sheet.on')) return;   /* 획순 등 시트가 떠 있으면 카드가 넘어가면 안 된다 */

@@ -811,7 +811,7 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v3.3';
+const APP_VER='v3.4';
 const APP_DATE='2026-09-08';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
@@ -1177,9 +1177,13 @@ $('#btnPasteAdd').onclick=()=>{
       값싼 모델로도 충분해진 것이 여기서 나왔다.
    ③ tip은 만들게 하지 않는다 — 출력 토큰의 15~20%인데 v3.0에서 화면 표시를 없앴다.
       기존 카드의 팁 자료와 편집 시트의 팁 칸은 그대로 둔다.               */
+/* ⚠ 머리말은 «자료가 어디 있는지»를 말한다. 사진은 첨부로, 지문은 아래 글로 온다.
+   v3.3 에서 지문에도 「첨부한…」을 그대로 보내는 바람에 모델이 JSON 대신
+   «자료가 첨부되지 않았다»고 되물었고 단어 뽑기가 통째로 실패했다. */
+const P_HEAD_ATTACH = '첨부한 일본어 수업 자료의 단어를 아래 JSON 형식으로 정리해 줘.';
+const P_HEAD_TEXT   = '아래에 적은 일본어 지문에서 단어를 뽑아 아래 JSON 형식으로 정리해 줘.';
+
 const P_RULES = [
-'첨부한 일본어 수업 자료의 단어를 아래 JSON 형식으로 정리해 줘.',
-'',
 '규칙',
 '- 후리가나가 단어와 줄이 분리돼 있으면 다시 합칠 것',
 '- "／"로 묶인 유의어는 각각 별도 단어로 분리할 것',
@@ -1212,7 +1216,16 @@ const P_SAMPLE = [
 ']'
 ].join('\n');
 
-const CLAUDE_PROMPT = P_RULES + '\n\n' + P_CRIT + '\n\n' + P_SAMPLE;
+const buildPrompt = head => head + '\n\n' + P_RULES + '\n\n' + P_CRIT + '\n\n' + P_SAMPLE;
+const CLAUDE_PROMPT = buildPrompt(P_HEAD_ATTACH);   /* 사진·파일·붙여넣기용 */
+/* 지문용 꼬리. 모델은 프롬프트의 «끝»을 가장 잘 따르므로 자료 바로 앞에 한 번 더 못박는다 */
+const PICK_PROMPT   = buildPrompt(P_HEAD_TEXT) + '\n' + [
+'',
+'추가 지시 (지문)',
+'- 지문은 이 지시 아래에 이어서 적혀 있다',
+'- 담을 단어를 찾지 못하면 빈 배열 [] 만 출력할 것',
+'- 다른 말 없이 JSON 배열만 출력할 것'
+].join('\n');
 
 $('#btnCopyPrompt').onclick=async ()=>{
   try{
@@ -3002,7 +3015,11 @@ async function aiJson(blocks, prompt){
     const mm=txt.match(/[\[{][\s\S]*[\]}]/);   /* 설명이 섞여 나온 경우 JSON만 건져낸다 */
     if(mm){ try{ out=JSON.parse(mm[0]); }catch(e2){} }
   }
-  if(out==null||typeof out!=='object') throw new Error('결과를 이해하지 못했습니다. 다시 시도해 주세요.');
+  if(out==null||typeof out!=='object'){
+    /* 무엇이 왔는지 보여 주지 않으면 원인을 영영 모른다 (v3.4) */
+    const hint=String(txt||'').replace(/\s+/g,' ').trim().slice(0,70);
+    throw new Error('결과를 이해하지 못했습니다.'+(hint?' 모델이 이렇게 답했습니다 — 「'+hint+'…」':' 다시 시도해 주세요.'));
+  }
   return out;
 }
 function imgBlock(dataUrl){
@@ -3503,8 +3520,9 @@ async function pickWordsFromText(){
   if(!AI.key||!AI.model){ toast('설정에서 Claude API 키를 먼저 넣어 주세요.'); go('settings'); return; }
   const btn=$('#rdPick'); btn.disabled=true; btn.textContent='뽑는 중…';
   try{
-    const body='자료 (지문 「'+stripRuby(t.title)+'」)\n'+t.lines.map(l=>stripRuby(l)).join('\n');
-    const arr=await aiJson([], CLAUDE_PROMPT+'\n\n'+body);
+    /* 후리가나를 지우지 않는다 — 한자[읽기] 가 그대로 있어야 read 를 정확히 뽑는다 */
+    const body='지문 「'+t.title+'」\n'+t.lines.join('\n');
+    const arr=await aiJson([], PICK_PROMPT+'\n\n'+body);
     if(!Array.isArray(arr)) throw new Error('결과를 이해하지 못했습니다.');
     const items=arr.filter(o=>o&&stripRuby(o.word||'').trim());
     if(!items.length){ toast('이 지문에서 단어를 찾지 못했습니다.'); return; }

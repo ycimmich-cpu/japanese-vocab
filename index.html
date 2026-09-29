@@ -853,7 +853,7 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v3.5';
+const APP_VER='v3.6';
 const APP_DATE='2026-09-08';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
@@ -1221,7 +1221,7 @@ function brenumber(date){
 /* 같은 날짜의 같은 단어는 다시 넣지 않는다 (묶음이 달라도 마찬가지 —
    이 앱은 자료 보관함이 아니라 학습 도구라 퀴즈에 두 번 나오면 안 된다) */
 function wkey(w){ return stripRuby(w.word||'').trim()+'|'+(w.date||''); }
-function addWords(arr,quiet){
+function addWords(arr,quiet,where){
   if(!arr.length){ if(!quiet) toast('추가할 단어를 찾지 못했습니다.'); return 0; }
   const have=new Set(S.words.map(wkey)), seen=new Set(), fresh=[];
   arr.forEach(w=>{ const k=wkey(w); if(!stripRuby(w.word||'').trim()) return; if(have.has(k)||seen.has(k)) return; seen.add(k); fresh.push(w); });
@@ -1232,9 +1232,14 @@ function addWords(arr,quiet){
     return old && bnum(old)!==bnum(w);
   }).length;
   const why=other? ' · 그중 '+other+'개는 같은 날 다른 묶음에 이미 있습니다':'';
-  if(!fresh.length){ if(!quiet) toast('이미 등록된 단어입니다 (중복 '+dup+'개 제외)'+why+'.',null,other?6000:3500); return 0; }
+  if(!fresh.length){
+    if(!quiet) toast('하나도 담기지 않았습니다 — 이미 등록된 단어입니다 (중복 '+dup+'개)'+why+
+                     '.\n날짜를 바꾸면 새로 담을 수 있습니다.', null, 7000);
+    return 0;
+  }
   S.words=S.words.concat(fresh); save();
-  if(!quiet) toast(fresh.length+'개 추가'+(dup?' · 중복 '+dup+'개 제외':'')+'했습니다.'+why,null,other?6000:3500);
+  if(!quiet) toast(fresh.length+'개 추가'+(dup?' · 중복 '+dup+'개 제외':'')+'했습니다.'+
+                   (where?' → '+where:'')+why, null, (other||where)?6000:3500);
   renderHome();
   return fresh.length;
 }
@@ -3281,6 +3286,13 @@ function paintRevBatch(){
   $('#revNameWrap').style.display = revJoin? 'none':'';
 }
 $('#revDate').addEventListener('change',()=>{ revJoin=false; paintRevBatch(); });
+/* 이름을 치고 엔터 — 시트가 <form> 이 아니라 아무 일도 일어나지 않았다 (v3.6) */
+['#revBname','#revDate'].forEach(sel=>{
+  const el=$(sel); if(!el) return;
+  el.addEventListener('keydown',e=>{
+    if(e.key==='Enter'||e.keyCode===13){ e.preventDefault(); $('#revAdd').click(); }
+  });
+});
 $$('#revJoinSeg button').forEach(b=>b.onclick=()=>{ revJoin=(b.dataset.j==='1'); paintRevBatch(); });
 function updRevCount(){ $('#revCount').textContent=revItems.filter(x=>x.on).length+'개 선택'; }
 function openReview(s){
@@ -3352,7 +3364,13 @@ $('#revAdd').onclick=()=>{
   const last=nums.length? nums[nums.length-1] : 0;
   const batch=(revJoin && last)? last : last+1;
   const bname=revJoin? bnameOf(d,batch) : $('#revBname').value.trim().slice(0,30);
-  const n=addWords(sel.map(x=>makeWord(Object.assign({},x.w,{date:d,batch:batch,bname:bname}))));
+  /* 어디로 들어갔는지 토스트에 밝힌다 — 지문에서 담으면 화면이 안 바뀌어 확인할 길이 없다 */
+  const where=(batch>1||bname)? blabel(d,batch,bname,true,true) : '';
+  const n=addWords(sel.map(x=>makeWord(Object.assign({},x.w,{date:d,batch:batch,bname:bname}))),false,where);
+  /* ⚠ 하나도 안 들어갔으면 시트를 닫지 않는다 (v3.6).
+     전부 중복이면 «저장이 안 된다»로 보이는데, 시트까지 닫히면 왜인지 볼 수도,
+     날짜나 묶음을 바꿔 다시 해 볼 수도 없다 */
+  if(!n) return;
   $('#reviewSheet').classList.remove('on');
   if(revShot) dropShot(revShot.id);
   const fromText = revFrom==='text';

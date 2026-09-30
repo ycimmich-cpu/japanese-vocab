@@ -447,6 +447,7 @@
       <div class="seg" id="addMode" style="margin-bottom:14px">
         <button data-m="cam" class="on">📷 사진</button>
         <button data-m="doc">📄 문서</button>
+        <button data-m="type">✍️ 직접</button>
       </div>
 
       <div id="addCam">
@@ -468,6 +469,22 @@
         <button class="btn primary block cambtn" id="btnDocPick">📄 문서에서 단어 뽑기</button>
         <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md,.csv,.tsv,.json" multiple style="display:none">
         <div class="hint" id="docHint" style="display:none;margin-top:12px"></div>
+      </div>
+
+      <div id="addType" style="display:none">
+        <div class="hint">
+          <b>한 줄에 한 단어씩</b> 붙여넣거나 적으면 됩니다. 구분자는 <code>|</code> · 탭 · <code>/</code>.<br>
+          <b>단어[후리가나] | 뜻 | 예문 | 예문 해석 | 레벨</b><br>
+          <b>단어 하나만 적어도 됩니다.</b> 나머지는 나중에 단어장에서 채울 수 있습니다.
+        </div>
+        <div class="field">
+          <label>단어 목록</label>
+          <textarea id="typeBox" style="min-height:130px"
+            placeholder="大人[おとな] | 어른 | 大人[おとな]になったら、車[くるま]を運転[うんてん]したいです。 | 어른이 되면 차를 운전하고 싶어요. | N5&#10;怠[なま]ける | 게으름을 피우다&#10;宿題[しゅくだい]"></textarea>
+        </div>
+        <div class="field"><label>등록 날짜</label><input type="date" id="typeDate"></div>
+        <button class="btn primary block" id="btnTypeAdd">단어장에 추가</button>
+        <div class="hint" id="typeHint" style="display:none;margin-top:12px"></div>
       </div>
       </div><!-- /addWordWrap -->
 
@@ -842,7 +859,7 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v3.9';
+const APP_VER='v3.10';
 const APP_DATE='2026-09-08';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
@@ -881,7 +898,7 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
    «처음 연 날»이 그대로 굳어 「오늘이 9월 4일」이 됐다.
    화면을 열 때마다, 그리고 앱으로 돌아올 때마다 다시 채운다.
    손으로 고쳐 둔 날짜는 건드리지 않는다 — 비었거나 «지난 오늘»일 때만 바꾼다. */
-const DATE_FIELDS=['#sentDate','#camDate'];
+const DATE_FIELDS=['#sentDate','#camDate','#typeDate'];
 let dateStamp='';
 function stampToday(force){
   const t=todayStr();
@@ -1154,6 +1171,31 @@ function parseWordField(s){
   if(m) return {word:m[1].trim(),read:m[2].trim()};
   return {word:s,read:''};
 }
+/* 한 줄에 한 단어. v3.8 에서 지웠던 것을 되살렸다 (v3.10).
+   ⚠ 옛 형식과 달리 «품사»를 자리로 요구하지 않는다 — 손으로 넣는 사람에게
+   n/v/a/na 를 외우게 하면 그 자리에서 그만둔다. 품사가 오면 받고, 없으면 명사로 둔다. */
+function parseText(text, date){
+  const out=[];
+  (text||'').split(/\r?\n/).forEach(line=>{
+    line=line.trim();
+    if(!line || line.startsWith('#')) return;
+    const f=splitFields(line).map(x=>x.trim());
+    const wf=parseWordField(f[0]);
+    if(!wf.word) return;
+    let pos='n', mean='', ex='', exKo='', level='N5';
+    if(f.length>=2){
+      const maybe=f[1].toLowerCase();
+      if(['n','v','a','na','ad','e'].indexOf(maybe)>=0){
+        pos=maybe; mean=f[2]||''; ex=f[3]||''; exKo=f[4]||''; level=f[5]||'N5';
+      }else{
+        mean=f[1]||''; ex=f[2]||''; exKo=f[3]||''; level=f[4]||'N5';
+      }
+    }
+    out.push({word:wf.word, read:wf.read, pos:pos, mean:mean, ex:ex, exKo:exKo, level:level, date:date});
+  });
+  return out;
+}
+
 function makeWord(o){
   return {id:uid(),word:stripRuby(o.word||''),read:o.read||'',pos:o.pos||'n',mean:o.mean||'',
     ex:o.ex||'',exKo:o.exKo||'',tip:o.tip||'',level:o.level||'N5',img:o.img||'',
@@ -1236,7 +1278,8 @@ $$('#addMode button').forEach(b=>b.onclick=()=>{
   $$('#addMode button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
   $('#addCam').style.display=b.dataset.m==='cam'?'':'none';
   $('#addDoc').style.display=b.dataset.m==='doc'?'':'none';
-  docSay('');
+  $('#addType').style.display=b.dataset.m==='type'?'':'none';
+  docSay(''); typeSay('');
 });
 /* Claude가 돌려준 ```json 코드펜스를 벗겨낸다 */
 function stripFence(t){
@@ -2241,6 +2284,21 @@ async function wordsFromFiles(files){
   }catch(e){ docSay('<b>실패</b> · '+esc((e&&e.message)||'처리하지 못했습니다.')); }
   docBusy=false;
 }
+function typeSay(msg){
+  const el=$('#typeHint'); if(!el) return;
+  el.innerHTML=msg||''; el.style.display=msg?'':'none';
+}
+$('#btnTypeAdd').onclick=()=>{
+  const raw=$('#typeBox').value;
+  if(!raw.trim()){ typeSay('<b>넣을 단어를 적어 주세요.</b> 한 줄에 하나씩이면 됩니다.'); return; }
+  const date=$('#typeDate').value||todayStr();
+  const items=parseText(raw, date);
+  if(!items.length){ typeSay('<b>단어를 찾지 못했습니다.</b> 한 줄에 한 단어씩 적어 주세요.'); return; }
+  typeSay('');
+  /* 사진·문서와 같은 확인 시트를 거친다 — 날짜와 묶음을 여기서 정하고, 중복도 여기서 걸린다 */
+  openReview({id:null, from:'type', date:date, result:items});
+};
+
 $('#btnDocPick').onclick=()=>$('#fileInput').click();
 $('#fileInput').onchange=e=>{
   const fs=e.target.files; const list=fs?[].slice.call(fs):[];
@@ -2297,7 +2355,7 @@ $('#revDateOld').onclick=e=>setRevDate(e.currentTarget.dataset.d);
 function updRevCount(){ $('#revCount').textContent=revItems.filter(x=>x.on).length+'개 선택'; }
 function openReview(s){
   /* 지문·문서에서 온 것은 «사진»이 아니다. 끝나고 사진을 지우면 안 된다 (v3.3, v3.8) */
-  revShot = (s && (s.from==='text'||s.from==='doc')) ? null : s;
+  revShot = (s && (s.from==='text'||s.from==='doc'||s.from==='type')) ? null : s;
   revFrom = (s && s.from) || 'shot';
   revSrc  = s;
   revItems=((s.result||[]).filter(o=>o&&stripRuby(o.word||'').trim())).map(o=>({on:true,w:o}));
@@ -2309,7 +2367,8 @@ function openReview(s){
   $('#revDate').value=todayStr();
   paintRevOld(guess);
   $('#revTitle').textContent = revFrom==='text' ? '지문에서 뽑은 단어'
-                             : revFrom==='doc'  ? '문서에서 뽑은 단어' : '인식 결과 확인';
+                             : revFrom==='doc'  ? '문서에서 뽑은 단어'
+                             : revFrom==='type' ? '직접 적은 단어' : '인식 결과 확인';
   $('#revBname').value=''; revJoin=false; paintRevBatch();
   renderReview();
   $('#reviewSheet').classList.add('on');
@@ -2380,6 +2439,7 @@ $('#revAdd').onclick=()=>{
      날짜나 묶음을 바꿔 다시 해 볼 수도 없다 */
   if(!n) return;
   $('#reviewSheet').classList.remove('on');
+  if(revFrom==='type'){ const tb=$('#typeBox'); if(tb) tb.value=''; }
   if(revShot) dropShot(revShot.id);
   const fromText = revFrom==='text';
   revShot=null; revSrc=null; revFrom='shot';

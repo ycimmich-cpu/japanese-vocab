@@ -41,8 +41,17 @@
   /* ---------- 공통 헤더 ---------- */
   .topbar{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
   .topbar h1{font-size:17px;margin:0;font-weight:700;flex:1}
-  .iconbtn{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:18px;color:var(--ink)}
+  /* ⚠ 38px 은 손가락으로 누르기에 작다(권장 최소 44px). 그리고 배경이 :hover 에만 있어
+     휴대폰에서는 «글자 하나»로 보였다 → 44px 로 키우고, 뒤로·홈에만 배경을 상시로 (v3.8) */
+  .iconbtn{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;
+           font-size:20px;color:var(--ink);flex:none;-webkit-tap-highlight-color:transparent}
   .iconbtn:hover{background:var(--soft)}
+  .iconbtn:active{transform:scale(.94)}
+  /* 뒤로·홈만 «버튼처럼» 보이게 한다. 한 줄에 서너 개인 화면에서 테두리가 줄서지 않도록
+     나머지 아이콘에는 붙이지 않는다 */
+  .iconbtn.key{background:var(--soft);border:1px solid var(--line)}
+  .iconbtn.key:hover{background:var(--line)}
+  .iconbtn svg{display:block}
   .pill{display:inline-flex;align-items:center;gap:6px;background:var(--soft);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600}
   .pill.green{background:rgba(22,163,74,.12);color:#15803d}
   .pill.red{background:rgba(220,38,38,.10);color:#b91c1c}
@@ -380,7 +389,7 @@
   <!-- ================= 홈: 날짜별 ================= -->
   <section id="homeScreen" class="screen">
     <div class="topbar">
-      <button class="iconbtn" onclick="go('pick')" title="처음 화면">⌂</button>
+      <button class="iconbtn key" onclick="go('pick')" title="처음 화면" aria-label="처음 화면"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg></button>
       <span class="brandmark" id="brandMark"><svg viewBox="0 0 512 512"><use href="#ensoShape" fill="currentColor"/></svg></span>
       <h1>단어장</h1>
       <button class="iconbtn" id="btnStudyAll" title="전체 학습">▶</button>
@@ -400,7 +409,7 @@
   <!-- ================= 단어장 목록 ================= -->
   <section id="listScreen" class="screen">
     <div class="topbar">
-      <button class="iconbtn" onclick="go('pick')" title="처음 화면">⌂</button>
+      <button class="iconbtn key" onclick="go('pick')" title="처음 화면" aria-label="처음 화면"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg></button>
       <h1>단어 목록</h1>
       <button class="iconbtn" id="btnListSel" title="선택해서 삭제">☑</button>
       <button class="iconbtn" id="btnStudyFiltered" title="이 목록 학습">▶</button>
@@ -421,16 +430,14 @@
   <!-- ================= 추가 ================= -->
   <section id="addScreen" class="screen">
     <div class="topbar">
-      <button class="iconbtn" onclick="go('pick')" title="처음 화면">⌂</button>
+      <button class="iconbtn key" onclick="go('pick')" title="처음 화면" aria-label="처음 화면"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg></button>
       <h1 id="addTitle">단어 추가</h1>
     </div>
     <div class="body">
       <div id="addWordWrap">
       <div class="seg" id="addMode" style="margin-bottom:14px">
         <button data-m="cam" class="on">📷 사진</button>
-        <button data-m="paste">붙여넣기</button>
-        <button data-m="form">직접 입력</button>
-        <button data-m="file">파일</button>
+        <button data-m="doc">📄 문서</button>
       </div>
 
       <div id="addCam">
@@ -443,51 +450,15 @@
         <div id="shotList"></div>
       </div>
 
-      <div id="addPaste" style="display:none">
+      <div id="addDoc" style="display:none">
         <div class="hint">
-          <b>① 사진은 📷 탭에서</b> — 찍으면 바로 인식해 등록합니다. 여기는 Claude 앱에서 받은 JSON을 옮겨 담는 곳입니다.<br>
-          <b>② 직접 입력</b> — 한 줄에 한 단어씩, 구분자는 <code>|</code> · 탭 · <code>/</code>.<br>
-          <b>단어[후리가나] | 품사 | 뜻 | 예문 | 예문 해석 | 레벨</b><br>
-          예문의 한자도 <code>漢字[かんじ]</code> 형식으로 쓰면 후리가나가 위에 붙습니다. 뒤쪽 항목은 비워도 됩니다.
+          <b>PDF · 워드(.docx) · 텍스트</b>에서 단어를 뽑습니다.
+          <b>여러 개를 한 번에</b> 고르면 한 자료로 이어서 읽습니다.<br>
+          정리해 드린 <b>.json</b> 단어 파일은 <b>인터넷 없이</b> 그 자리에서 읽습니다.
         </div>
-        <button class="btn block sm" id="btnCopyPrompt" style="margin-bottom:12px">📋 Claude에게 보낼 요청문 복사</button>
-        <div class="field">
-          <label>붙여넣기 (JSON도 그대로 인식합니다)</label>
-          <textarea id="pasteBox" placeholder="大人[おとな] | n | 어른 | 大人[おとな]になったら、車[くるま]を運転[うんてん]したいです。 | 어른이 되면 차를 운전하고 싶어요. | N5"></textarea>
-        </div>
-        <div class="field"><label>입력 날짜</label><input type="date" id="pasteDate"><div class="hint" style="margin:6px 0 0;padding:8px 10px">JSON 안에 <code>date</code>가 있으면 그 날짜가 우선 적용됩니다.</div></div>
-        <button class="btn primary block" id="btnPasteAdd">단어장에 추가</button>
-        <button class="btn block" style="margin-top:8px" id="btnSample">샘플 14단어 넣어보기</button>
-      </div>
-
-      <div id="addForm" style="display:none">
-        <div class="field"><label>단어 (한자/가나)</label><input id="fWord" placeholder="大人"></div>
-        <div class="field"><label>후리가나</label><input id="fRead" placeholder="おとな"></div>
-        <div class="row" style="gap:10px">
-          <div class="field grow"><label>품사</label>
-            <select id="fPos"><option value="n">명사 (n)</option><option value="v">동사 (v)</option>
-            <option value="a">い형용사 (a)</option><option value="na">な형용사 (na)</option>
-            <option value="ad">부사 (ad)</option><option value="e">표현 (e)</option></select></div>
-          <div class="field grow"><label>레벨</label>
-            <select id="fLevel"><option>N5</option><option>N4</option><option>N3</option><option>N2</option><option>N1</option><option value="">-</option></select></div>
-        </div>
-        <div class="field"><label>뜻</label><input id="fMean" placeholder="어른"></div>
-        <div class="field"><label>예문 (한자[후리가나] 형식)</label><input id="fEx" placeholder="大人[おとな]になったら、車[くるま]を運転[うんてん]したいです。"></div>
-        <div class="field"><label>예문 해석</label><input id="fExKo" placeholder="어른이 되면 차를 운전하고 싶어요."></div>
-        <div class="field"><label>팁 / 메모 (선택)</label><input id="fTip" placeholder="子供(こども)의 반대말"></div>
-        <div class="field"><label>이미지 (선택)</label><input type="file" id="fImg" accept="image/*"></div>
-        <div class="field"><label>입력 날짜</label><input type="date" id="fDate"></div>
-        <button class="btn primary block" id="btnFormAdd">추가하기</button>
-      </div>
-
-      <div id="addFile" style="display:none">
-        <div class="hint">
-          <b>텍스트(.txt/.csv) · JSON(.json)</b> 파일은 여기서 바로 읽습니다.<br>
-          <b>사진</b>은 📷 탭에서 바로 처리됩니다. <b>PDF · 워드</b>는 Claude 대화창에 올려 주세요. 정리한 <code>.json</code> 파일을 만들어 드리면 여기서 불러오면 됩니다.
-        </div>
-        <div class="field"><label>파일 선택</label><input type="file" id="fileInput" accept=".txt,.csv,.json,.tsv"></div>
-        <div class="field"><label>입력 날짜</label><input type="date" id="fileDate"></div>
-        <button class="btn primary block" id="btnFileAdd">파일에서 추가</button>
+        <button class="btn primary block cambtn" id="btnDocPick">📄 문서에서 단어 뽑기</button>
+        <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md,.csv,.tsv,.json" multiple style="display:none">
+        <div class="hint" id="docHint" style="display:none;margin-top:12px"></div>
       </div>
       </div><!-- /addWordWrap -->
 
@@ -495,7 +466,6 @@
         <div class="seg" id="sentMode" style="margin-bottom:14px">
           <button data-m="scam" class="on">📷 사진</button>
           <button data-m="sfile">📄 문서</button>
-          <button data-m="stype">✍️ 직접</button>
         </div>
 
         <div id="sentCam">
@@ -514,18 +484,9 @@
           <div class="field"><label>파일 선택</label><input type="file" id="sentFileInput" accept=".pdf,.docx,.txt,.md,.csv" multiple></div>
         </div>
 
-        <div id="sentType" style="display:none">
-          <div class="field"><label>제목 (비워 두면 본문의 <code>제목:</code> 줄에서 찾습니다)</label><input id="stTitle" placeholder="私の一日"></div>
-          <div class="field"><label>본문 — 한 줄에 한 문장</label>
-            <textarea id="stBody" placeholder="毎朝[まいあさ]六時[ろくじ]に 起[お]きます。&#10;朝[あさ]ごはんを 食[た]べてから 学校[がっこう]へ 行[い]きます。"></textarea></div>
-          <div class="hint">한자에 <code>漢字[かんじ]</code>처럼 직접 달아도 되고, 아래 버튼으로 자동으로 달 수도 있습니다.</div>
-          <button class="btn block sm" id="btnFuri" style="margin-bottom:10px">ふりがな 후리가나 자동으로 달기</button>
-        </div>
-
         <div class="field" style="margin-top:12px"><label>날짜</label><input type="date" id="sentDate"></div>
         <div class="field"><label>목표 횟수</label><input type="number" id="sentTarget" min="1" max="9999" value="100"></div>
-        <button class="btn primary block" id="btnSentAdd" style="display:none">지문 추가</button>
-        <div class="hint" id="sentHint" style="margin-top:12px"></div>
+        <div class="hint" id="sentHint" style="display:none;margin-top:12px"></div>
       </div>
     </div>
   </section>
@@ -533,7 +494,7 @@
   <!-- ================= 학습 카드 ================= -->
   <section id="studyScreen" class="screen">
     <div class="studybar">
-      <button class="iconbtn" id="btnStudyBack">‹</button>
+      <button class="iconbtn key" id="btnStudyBack" title="뒤로" aria-label="뒤로"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg></button>
       <div class="grow row" style="justify-content:center;gap:8px">
         <span class="pill red" id="pillSkip">🗑 <b id="skipCnt">0</b></span>
         <span class="pill green">✓ <b id="doneCnt">0</b> / <b id="totalCnt">0</b></span>
@@ -558,7 +519,7 @@
   <!-- ================= 퀴즈 ================= -->
   <section id="quizScreen" class="screen">
     <div class="studybar">
-      <button class="iconbtn" id="btnQuizBack">‹</button>
+      <button class="iconbtn key" id="btnQuizBack" title="뒤로" aria-label="뒤로"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg></button>
       <div class="grow row" style="justify-content:center">
         <span class="pill green">✓ <b id="qCorrect">0</b> / <b id="qDone">0</b></span>
       </div>
@@ -570,7 +531,7 @@
 
   <!-- ================= 설정 ================= -->
   <section id="settingsScreen" class="screen">
-    <div class="topbar"><button class="iconbtn" onclick="go('home')">‹</button><h1>설정</h1></div>
+    <div class="topbar"><button class="iconbtn key" onclick="go('home')" title="뒤로" aria-label="뒤로"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg></button><h1>설정</h1></div>
     <div class="body">
       <div class="card">
         <div style="font-weight:800;margin-bottom:10px">발음 (TTS)</div>
@@ -605,7 +566,7 @@
           사진을 찍으면 단어·읽는 법·뜻·예문까지 자동으로 만들어 등록합니다. Claude API 키가 필요하고,
           쓴 만큼만 차감됩니다 (사진 한 장에 몇 원 수준).<br>
           키는 <b>이 기기 안에만</b> 저장되고, 백업 파일에는 들어가지 않습니다.
-          키가 없어도 사진 보관과 <b>Claude 앱으로 보내기</b>는 그대로 쓸 수 있습니다.
+          키가 없으면 사진은 <b>보관만</b> 되고, 나중에 키를 넣었을 때 한꺼번에 인식할 수 있습니다.
         </div>
         <div class="field"><label>API 키</label><input id="aiKey" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false"></div>
         <div class="field"><label>사용할 모델</label><select id="aiModel"><option value="">키를 저장하면 목록을 불러옵니다</option></select></div>
@@ -638,7 +599,7 @@
   <!-- ================= 문장: 지문 목록 ================= -->
   <section id="sentScreen" class="screen">
     <div class="topbar">
-      <button class="iconbtn" onclick="go('pick')" title="처음 화면">⌂</button>
+      <button class="iconbtn key" onclick="go('pick')" title="처음 화면" aria-label="처음 화면"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg></button>
       <span class="brandmark"><svg viewBox="0 0 512 512"><use href="#ensoShape" fill="currentColor"/></svg></span>
       <h1>문장 읽기</h1>
       <button class="iconbtn" id="btnSentSel" title="선택해서 삭제">☑</button>
@@ -658,7 +619,7 @@
   <!-- ================= 문장: 음독 ================= -->
   <section id="readScreen" class="screen">
     <div class="studybar">
-      <button class="iconbtn" id="rdBack">‹</button>
+      <button class="iconbtn key" id="rdBack" title="뒤로" aria-label="뒤로"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg></button>
       <div class="grow" style="min-width:0">
         <div id="rdTitle" style="font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
         <div id="rdMeta" class="muted" style="font-size:11px"></div>
@@ -857,7 +818,7 @@
 <script>
 /* ===================== 버전 정보 ===================== */
 const APP_NAME='일본어 단어장';
-const APP_VER='v3.7';
+const APP_VER='v3.8';
 const APP_DATE='2026-09-08';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
@@ -896,7 +857,7 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
    «처음 연 날»이 그대로 굳어 「오늘이 9월 4일」이 됐다.
    화면을 열 때마다, 그리고 앱으로 돌아올 때마다 다시 채운다.
    손으로 고쳐 둔 날짜는 건드리지 않는다 — 비었거나 «지난 오늘»일 때만 바꾼다. */
-const DATE_FIELDS=['#pasteDate','#fDate','#fileDate','#sentDate','#camDate'];
+const DATE_FIELDS=['#sentDate','#camDate'];
 let dateStamp='';
 function stampToday(force){
   const t=todayStr();
@@ -1169,22 +1130,6 @@ function parseWordField(s){
   if(m) return {word:m[1].trim(),read:m[2].trim()};
   return {word:s,read:''};
 }
-function parseText(text,date){
-  const out=[];
-  text.split(/\r?\n/).forEach(line=>{
-    line=line.trim(); if(!line||line.startsWith('#')) return;
-    const f=splitFields(line).map(x=>x.trim());
-    const wf=parseWordField(f[0]); if(!wf.word) return;
-    let pos='n',mean='',ex='',exKo='',level='N5';
-    if(f.length>=2){
-      const maybePos=f[1].toLowerCase();
-      if(['n','v','a','na','ad','e'].includes(maybePos)){ pos=maybePos; mean=f[2]||''; ex=f[3]||''; exKo=f[4]||''; level=f[5]||'N5'; }
-      else { mean=f[1]||''; ex=f[2]||''; exKo=f[3]||''; level=f[4]||'N5'; }
-    }
-    out.push(makeWord({word:wf.word,read:wf.read,pos:pos,mean:mean,ex:ex,exKo:exKo,level:level,date:date}));
-  });
-  return out;
-}
 function makeWord(o){
   return {id:uid(),word:stripRuby(o.word||''),read:o.read||'',pos:o.pos||'n',mean:o.mean||'',
     ex:o.ex||'',exKo:o.exKo||'',tip:o.tip||'',level:o.level||'N5',img:o.img||'',
@@ -1266,9 +1211,8 @@ function addWords(arr,quiet,where){
 $$('#addMode button').forEach(b=>b.onclick=()=>{
   $$('#addMode button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
   $('#addCam').style.display=b.dataset.m==='cam'?'':'none';
-  $('#addPaste').style.display=b.dataset.m==='paste'?'':'none';
-  $('#addForm').style.display=b.dataset.m==='form'?'':'none';
-  $('#addFile').style.display=b.dataset.m==='file'?'':'none';
+  $('#addDoc').style.display=b.dataset.m==='doc'?'':'none';
+  docSay('');
 });
 /* Claude가 돌려준 ```json 코드펜스를 벗겨낸다 */
 function stripFence(t){
@@ -1277,31 +1221,6 @@ function stripFence(t){
     .replace(/```\s*$/,'')
     .trim();
 }
-$('#btnPasteAdd').onclick=()=>{
-  const raw=stripFence($('#pasteBox').value);
-  const date=$('#pasteDate').value||todayStr();
-  if(!raw){ toast('내용을 붙여넣어 주세요.'); return; }
-
-  /* [ 또는 { 로 시작하면 JSON으로 처리 (사진 → Claude → 복붙 흐름) */
-  if(/^[\[{]/.test(raw)){
-    let list;
-    try{
-      const j=JSON.parse(raw);
-      list=Array.isArray(j)?j:(j.words||j.단어||null);
-    }catch(err){
-      toast('JSON 형식이 올바르지 않습니다. 대괄호·따옴표가 빠지지 않았는지 확인해 주세요.');
-      return;
-    }
-    if(!Array.isArray(list)||!list.length){ toast('JSON에서 단어를 찾지 못했습니다.'); return; }
-    const n=addWords(list.map(o=>makeWord(Object.assign({date:date},o))));
-    if(n){ $('#pasteBox').value=''; go('home'); }
-    return;
-  }
-
-  const n=addWords(parseText(raw,date));
-  if(n){ $('#pasteBox').value=''; go('home'); }
-};
-
 /* 자료를 Claude에 올릴 때 함께 보낼 요청문
    ────────────────────────────────────────────────────────────
    G0 측정(2026-09)에서 정해진 것을 그대로 옮겼다. `G0-측정-기록.md` 참고.
@@ -1362,60 +1281,6 @@ const PICK_PROMPT   = buildPrompt(P_HEAD_TEXT) + '\n' + [
 '- 다른 말 없이 JSON 배열만 출력할 것'
 ].join('\n');
 
-$('#btnCopyPrompt').onclick=async ()=>{
-  try{
-    await navigator.clipboard.writeText(CLAUDE_PROMPT);
-    toast('요청문을 복사했습니다. 사진과 함께 Claude에 붙여넣으세요.');
-  }catch(err){
-    /* 클립보드가 막힌 환경에서는 붙여넣기 칸에 넣어 직접 복사하게 한다 */
-    $('#pasteBox').value=CLAUDE_PROMPT;
-    toast('복사가 막혀 아래 칸에 넣었습니다. 길게 눌러 복사해 주세요.');
-  }
-};
-$('#btnFormAdd').onclick=()=>{
-  const w=$('#fWord').value.trim(); if(!w){toast('단어를 입력해 주세요.');return;}
-  const file=$('#fImg').files[0];
-  const build=(img)=>{
-    addWords([makeWord({word:w,read:$('#fRead').value.trim(),pos:$('#fPos').value,mean:$('#fMean').value.trim(),
-      ex:$('#fEx').value.trim(),exKo:$('#fExKo').value.trim(),tip:$('#fTip').value.trim(),
-      level:$('#fLevel').value,img:img,date:$('#fDate').value||todayStr()})]);
-    ['#fWord','#fRead','#fMean','#fEx','#fExKo','#fTip'].forEach(s=>$(s).value=''); $('#fImg').value='';
-  };
-  if(file) shrinkImage(file,build); else build('');
-};
-function shrinkImage(file,cb){
-  const r=new FileReader();
-  r.onload=e=>{
-    const im=new Image();
-    im.onload=()=>{
-      const max=640, sc=Math.min(1,max/Math.max(im.width,im.height));
-      const c=document.createElement('canvas'); c.width=im.width*sc; c.height=im.height*sc;
-      c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-      cb(c.toDataURL('image/jpeg',0.72));
-    };
-    im.onerror=()=>cb('');
-    im.src=e.target.result;
-  };
-  r.readAsDataURL(file);
-}
-$('#btnFileAdd').onclick=()=>{
-  const f=$('#fileInput').files[0]; if(!f){toast('파일을 선택해 주세요.');return;}
-  const date=$('#fileDate').value||todayStr();
-  const r=new FileReader();
-  r.onload=e=>{
-    const txt=e.target.result;
-    if(/\.json$/i.test(f.name)){
-      try{
-        const j=JSON.parse(txt);
-        const list=Array.isArray(j)?j:(j.words||[]);
-        addWords(list.map(o=>makeWord(Object.assign({date:date},o))));
-      }catch(err){toast('JSON을 읽지 못했습니다.');}
-    } else addWords(parseText(txt,date));
-    $('#fileInput').value='';
-  };
-  r.readAsText(f,'utf-8');
-};
-$('#btnSample').onclick=()=>{ addWords(SAMPLE.map(o=>makeWord(Object.assign({date:todayStr()},o)))); go('home'); };
 
 /* ===================== 단어 편집 시트 ===================== */
 /* ===================== 획순 보기 (KanjiVG) =====================
@@ -3008,22 +2873,6 @@ function installPacks(auto){
 }
 
 /* ===================== 샘플 데이터 ===================== */
-const SAMPLE=[
- {word:'大人',read:'おとな',pos:'n',mean:'어른',ex:'大人[おとな]になったら、車[くるま]を運転[うんてん]したいです。',exKo:'어른이 되면 차를 운전하고 싶어요.',tip:'子供(こども)의 반대말. 読み가 특별하니 통째로 외우세요.',level:'N5'},
- {word:'学生',read:'がくせい',pos:'n',mean:'학생',ex:'私[わたし]は日本語[にほんご]の学生[がくせい]です。',exKo:'저는 일본어 학생입니다.',level:'N5'},
- {word:'会社',read:'かいしゃ',pos:'n',mean:'회사',ex:'父[ちち]は会社[かいしゃ]で働[はたら]いています。',exKo:'아버지는 회사에서 일하고 있습니다.',level:'N5'},
- {word:'時間',read:'じかん',pos:'n',mean:'시간',ex:'時間[じかん]がありませんから、急[いそ]ぎましょう。',exKo:'시간이 없으니까 서두릅시다.',level:'N5'},
- {word:'電車',read:'でんしゃ',pos:'n',mean:'전철',ex:'毎朝[まいあさ]電車[でんしゃ]で学校[がっこう]へ行[い]きます。',exKo:'매일 아침 전철로 학교에 갑니다.',level:'N5'},
- {word:'食べる',read:'たべる',pos:'v',mean:'먹다',ex:'朝[あさ]ごはんを食[た]べましたか。',exKo:'아침밥을 먹었습니까?',level:'N5'},
- {word:'飲む',read:'のむ',pos:'v',mean:'마시다',ex:'毎日[まいにち]コーヒーを飲[の]みます。',exKo:'매일 커피를 마십니다.',level:'N5'},
- {word:'買う',read:'かう',pos:'v',mean:'사다',ex:'新[あたら]しい辞書[じしょ]を買[か]いたいです。',exKo:'새 사전을 사고 싶습니다.',level:'N5'},
- {word:'高い',read:'たかい',pos:'a',mean:'비싸다 · 높다',ex:'このかばんは高[たか]いですね。',exKo:'이 가방은 비싸네요.',level:'N5'},
- {word:'新しい',read:'あたらしい',pos:'a',mean:'새롭다',ex:'新[あたら]しい仕事[しごと]は楽[たの]しいです。',exKo:'새 일은 즐겁습니다.',level:'N5'},
- {word:'元気',read:'げんき',pos:'na',mean:'건강함 · 활기참',ex:'お元気[げんき]ですか。',exKo:'잘 지내세요?',level:'N5'},
- {word:'天気',read:'てんき',pos:'n',mean:'날씨',ex:'今日[きょう]はいい天気[てんき]ですね。',exKo:'오늘은 좋은 날씨네요.',level:'N5'},
- {word:'友だち',read:'ともだち',pos:'n',mean:'친구',ex:'友[とも]だちと映画[えいが]を見[み]ました。',exKo:'친구와 영화를 봤습니다.',level:'N5'},
- {word:'旅行',read:'りょこう',pos:'n',mean:'여행',ex:'来月[らいげつ]、日本[にほん]へ旅行[りょこう]に行[い]きます。',exKo:'다음 달에 일본으로 여행을 갑니다.',level:'N5'}
-];
 
 /* ===================== 시작 ===================== */
 load(); loadVoices();
@@ -3231,7 +3080,7 @@ function renderShots(){
   if(hint){
     hint.innerHTML = AI.key
       ? '찍으면 자동으로 인식해 확인 화면을 띄웁니다. 인터넷이 없으면 보관해 두었다가 연결되면 이어서 처리합니다.'
-      : '지금은 <b>사진만 보관</b>합니다. 설정 → <b>사진 인식 (AI)</b>에 API 키를 넣으면 찍는 즉시 단어로 등록됩니다. 키가 없어도 아래 <b>Claude 앱으로</b>로 처리할 수 있습니다.';
+      : '지금은 <b>사진만 보관</b>합니다. 설정 → <b>사진 인식 (AI)</b>에 API 키를 넣으면 찍는 즉시 단어로 등록됩니다.';
   }
   if(!SHOTS.length){ box.innerHTML=''; return; }
   box.innerHTML='<div class="datehead">사진 보관함 <span class="n">'+SHOTS.length+'장</span></div>'+
@@ -3243,10 +3092,10 @@ function renderShots(){
         acts=shotBtn('rev',s.id,'결과 보기','primary')+shotBtn('del',s.id,'삭제');
       } else if(s.status==='err'){
         st='⚠️ 실패';
-        acts=shotBtn('try',s.id,'다시 시도','primary')+shotBtn('cl',s.id,'Claude 앱으로')+shotBtn('del',s.id,'삭제');
+        acts=shotBtn('try',s.id,'다시 시도','primary')+shotBtn('del',s.id,'삭제');
       } else {
         st=AI.key?'⏳ 대기 중':'📥 보관됨';
-        acts=(AI.key?shotBtn('try',s.id,'지금 인식','primary'):'')+shotBtn('cl',s.id,'Claude 앱으로')+shotBtn('del',s.id,'삭제');
+        acts=(AI.key?shotBtn('try',s.id,'지금 인식','primary'):'')+shotBtn('del',s.id,'삭제');
       }
       return '<div class="shot"><img src="'+s.img+'" alt=""><div class="grow">'+
              '<div class="st">'+st+'</div>'+
@@ -3263,27 +3112,87 @@ function shotAct(act,id){
     if(!AI.key){ toast('설정에서 API 키를 먼저 넣어 주세요.'); go('settings'); return; }
     s.status='wait'; s.msg=''; saveShots(); renderShots(); queueAuto=true; runQueue(); return;
   }
-  if(act==='cl'){ sendToClaude(s); return; }
 }
 
-/* D 경로 — 키가 없거나 인식이 실패했을 때도 사진이 막다른 길로 가지 않게 한다 */
-async function sendToClaude(s){
-  try{ await navigator.clipboard.writeText(CLAUDE_PROMPT); }catch(e){}
-  let file=null;
-  try{
-    const blob=await (await fetch(s.img)).blob();
-    file=new File([blob],'단어사진_'+s.date+'.jpg',{type:'image/jpeg'});
-  }catch(e){}
-  if(file && navigator.canShare && navigator.canShare({files:[file]})){
-    try{
-      await navigator.share({files:[file],text:CLAUDE_PROMPT});
-      toast('Claude 앱에서 받은 JSON을 «붙여넣기» 탭에 넣어 주세요.',null,6000);
-      return;
-    }catch(e){ if(e&&e.name==='AbortError') return; }
-  }
-  const a=document.createElement('a'); a.href=s.img; a.download='단어사진_'+s.date+'.jpg'; a.click();
-  toast('사진을 저장했습니다. 요청문은 복사돼 있으니 Claude 앱에 사진과 함께 올려 주세요.',null,6000);
+/* ── 문서에서 단어 뽑기 (v3.8) ──────────────────────────
+   텍스트와 JSON 만 읽던 «파일» 탭을 PDF·워드까지 읽는 «문서» 탭으로 바꿨다.
+   읽는 장치는 이미 지문 쪽에 다 있다(fileBlocks) — 프롬프트만 단어용으로 바꿔 부른다.
+   ⚠ .json 은 정리해 드린 단어 파일이므로 API 를 태우지 않고 그 자리에서 읽는다. */
+const DOC_MAX_FILES=10;
+let docBusy=false;
+function docSay(msg){
+  const el=$('#docHint'); if(!el) return;
+  el.innerHTML=msg||''; el.style.display=msg?'':'none';
 }
+function jsonWords(txt){
+  const j=JSON.parse(stripFence(txt));
+  const arr=Array.isArray(j)?j:(j.words||j.단어||null);
+  if(!Array.isArray(arr)) throw new Error('단어 목록을 찾지 못했습니다.');
+  return arr;
+}
+async function wordsFromFiles(files){
+  if(docBusy) return;
+  const list=[].slice.call(files||[]);
+  if(!list.length) return;
+  if(list.length>DOC_MAX_FILES){
+    docSay('<b>한 번에 '+DOC_MAX_FILES+'개까지</b> 읽을 수 있습니다. 나눠서 올려 주세요. (고른 것: '+list.length+'개)');
+    return;
+  }
+  const isJson=f=>/\.json$/i.test(f.name||'');
+  const js=list.filter(isJson);
+
+  /* ① .json 만 골랐으면 그 자리에서 — 키가 없어도 된다 */
+  if(js.length===list.length){
+    docBusy=true; docSay('읽는 중…');
+    try{
+      let all=[];
+      for(const f of list){
+        const txt=await new Promise((res,rej)=>{
+          const r=new FileReader();
+          r.onload=e=>res(String(e.target.result||''));
+          r.onerror=()=>rej(new Error('파일을 읽지 못했습니다.'));
+          r.readAsText(f,'utf-8');
+        });
+        all=all.concat(jsonWords(txt));
+      }
+      if(!all.length) throw new Error('파일에 단어가 없습니다.');
+      docSay('');
+      openReview({id:null, from:'doc', date:todayStr(), result:all});
+    }catch(e){ docSay('<b>읽지 못했습니다</b> · '+esc((e&&e.message)||'')); }
+    docBusy=false; return;
+  }
+  /* ⚠ 섞여 있으면 한쪽은 API 로, 한쪽은 그냥 읽어야 해 흐름이 갈린다. 나눠 달라고 한다 */
+  if(js.length){
+    docSay('<b>.json 파일은 따로 올려 주세요.</b> 다른 문서와 읽는 방식이 달라 한 번에 섞을 수 없습니다.');
+    return;
+  }
+
+  /* ② 그 밖의 문서는 인식에 맡긴다 */
+  if(!AI.key||!AI.model){
+    docSay('설정 → <b>사진 인식 (AI)</b>에서 API 키를 먼저 넣어 주세요. 문서에서 단어를 뽑는 데 필요합니다.');
+    return;
+  }
+  docBusy=true;
+  docSay('<span class="spin" style="display:inline-block;vertical-align:-2px"></span> 문서를 읽는 중… (' +
+         list.length + '개)');
+  try{
+    let blocks=[];
+    for(const f of list) blocks=blocks.concat(await fileBlocks(f));
+    const out=await aiJson(blocks, CLAUDE_PROMPT);
+    const arr=Array.isArray(out)?out:(out.words||out.단어||[]);
+    const items=(Array.isArray(arr)?arr:[]).filter(o=>o&&stripRuby(String(o.word||'')).trim());
+    if(!items.length) throw new Error('이 문서에서는 단어를 찾지 못했습니다.');
+    docSay('');
+    openReview({id:null, from:'doc', date:todayStr(), result:items});
+  }catch(e){ docSay('<b>실패</b> · '+esc((e&&e.message)||'처리하지 못했습니다.')); }
+  docBusy=false;
+}
+$('#btnDocPick').onclick=()=>$('#fileInput').click();
+$('#fileInput').onchange=e=>{
+  const fs=e.target.files; const list=fs?[].slice.call(fs):[];
+  e.target.value='';
+  if(list.length) wordsFromFiles(list);
+};
 
 /* ---------- 확인 화면 ---------- */
 let revShot=null, revItems=[], revFrom='shot', revSrc=null;
@@ -3333,8 +3242,8 @@ $('#revDateOld').onclick=e=>setRevDate(e.currentTarget.dataset.d);
 
 function updRevCount(){ $('#revCount').textContent=revItems.filter(x=>x.on).length+'개 선택'; }
 function openReview(s){
-  /* 지문에서 온 것은 «사진»이 아니다. 끝나고 사진을 지우면 안 된다 (v3.3) */
-  revShot = (s && s.from==='text') ? null : s;
+  /* 지문·문서에서 온 것은 «사진»이 아니다. 끝나고 사진을 지우면 안 된다 (v3.3, v3.8) */
+  revShot = (s && (s.from==='text'||s.from==='doc')) ? null : s;
   revFrom = (s && s.from) || 'shot';
   revSrc  = s;
   revItems=((s.result||[]).filter(o=>o&&stripRuby(o.word||'').trim())).map(o=>({on:true,w:o}));
@@ -3345,7 +3254,8 @@ function openReview(s){
   const guess=(s.result||[]).map(o=>o&&o.date).filter(Boolean)[0] || (s&&s.date) || '';
   $('#revDate').value=todayStr();
   paintRevOld(guess);
-  $('#revTitle').textContent = revFrom==='text' ? '지문에서 뽑은 단어' : '인식 결과 확인';
+  $('#revTitle').textContent = revFrom==='text' ? '지문에서 뽑은 단어'
+                             : revFrom==='doc'  ? '문서에서 뽑은 단어' : '인식 결과 확인';
   $('#revBname').value=''; revJoin=false; paintRevBatch();
   renderReview();
   $('#reviewSheet').classList.add('on');
@@ -3355,6 +3265,8 @@ function renderReview(){
   if(!revItems.length){
     box.innerHTML = revFrom==='text'
       ? '<div class="empty"><div class="big">🔍</div>이 지문에서는 담을 단어를 찾지 못했습니다.</div>'
+      : revFrom==='doc'
+      ? '<div class="empty"><div class="big">🔍</div>이 문서에서는 단어를 찾지 못했습니다.</div>'
       : '<div class="empty"><div class="big">🔍</div>이 사진에서는 단어를 찾지 못했습니다.<br>글자가 크고 밝게 나오도록 다시 찍어 보세요.</div>';
     updRevCount(); return;
   }
@@ -3503,7 +3415,7 @@ function renderAI(){
   }
   $('#aiStat').innerHTML = AI.key
     ? '연결됨 · 모델 <b>'+esc(AI.model||'-')+'</b>. 📷 탭에서 사진을 찍으면 바로 인식합니다.'
-    : '아직 키가 없습니다. 넣지 않아도 사진 보관과 <b>Claude 앱으로</b>는 그대로 쓸 수 있습니다.';
+    : '아직 키가 없습니다. 키 없이도 <b>사진 보관</b>과 <b>.json 단어 파일 불러오기</b>는 됩니다.';
 }
 $('#aiKey').onfocus=e=>{ if(e.target.value===MASK) e.target.value=''; };
 $('#aiKey').onblur=e=>{ if(!e.target.value&&AI.key) e.target.value=MASK; };
@@ -3847,22 +3759,12 @@ const TEXT_PROMPT = [
 '          "朝[あさ]ごはんを 食[た]べてから 学校[がっこう]へ 行[い]きます。"]}'
 ].join('\n');
 
-const FURI_PROMPT = [
-'아래 일본어 문장에 후리가나를 달아 줘.',
-'',
-'규칙',
-'- 모든 한자에 한자[히라가나] 형식으로 달 것 (今日[きょう]は 天気[てんき]が いいです。)',
-'- 그 문맥에서 실제로 읽는 법으로 달 것',
-'- 문장을 고치거나 새로 만들지 말 것. 후리가나만 달 것',
-'- 입력의 줄 수와 순서를 그대로 유지할 것',
-'- 설명 없이 {"lines":[...]} 형식의 JSON만 출력할 것'
-].join('\n');
 
 /* 워드(.docx)는 zip 안의 word/document.xml 이다.
    라이브러리 없이 브라우저 기본 기능(DecompressionStream)만으로 꺼낸다. */
 async function docxText(file){
   if(!window.DecompressionStream)
-    throw new Error('이 브라우저에서는 워드 파일을 직접 읽지 못합니다. 내용을 복사해 «직접» 탭에 붙여넣어 주세요.');
+    throw new Error('이 브라우저에서는 워드 파일을 읽지 못합니다. PDF로 저장해 올려 주세요.');
   const buf=new Uint8Array(await file.arrayBuffer());
   const dv=new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
   const dec=new TextDecoder();
@@ -3925,7 +3827,7 @@ async function fileBlocks(file){
   }
   if(/\.docx$/.test(name)) return [{type:'text',text:await docxText(file)}];
   if(/\.(doc|hwp|pages)$/.test(name))
-    throw new Error('이 형식은 직접 읽지 못합니다. .docx나 PDF로 저장하거나, 내용을 «직접» 탭에 붙여넣어 주세요.');
+    throw new Error('이 형식은 읽지 못합니다. .docx나 PDF로 저장해 올려 주세요.');
   const t=await new Promise((res,rej)=>{
     const r=new FileReader();
     r.onload=e=>res(String(e.target.result||''));
@@ -4008,7 +3910,7 @@ $('#txAdd').onclick=()=>{
                      date:$('#txDate').value||todayStr(),
                      target:$('#txTarget').value, lines:lines}]);
   $('#textSheet').classList.remove('on'); txDraft=null;
-  if(n){ $('#stBody').value=''; $('#stTitle').value=''; MODE='sent'; go('sent'); }
+  if(n){ MODE='sent'; go('sent'); }
 };
 
 /* ---------- 추가 화면 배선 ---------- */
@@ -4016,8 +3918,6 @@ $$('#sentMode button').forEach(b=>b.onclick=()=>{
   $$('#sentMode button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
   $('#sentCam').style.display =b.dataset.m==='scam'?'':'none';
   $('#sentFile').style.display=b.dataset.m==='sfile'?'':'none';
-  $('#sentType').style.display=b.dataset.m==='stype'?'':'none';
-  $('#btnSentAdd').style.display=b.dataset.m==='stype'?'':'none';
   sentSay('');
 });
 $('#btnSentShoot').onclick=()=>$('#sentCamInput').click();
@@ -4025,48 +3925,10 @@ $('#btnSentPick').onclick=()=>$('#sentPickInput').click();
 ['#sentCamInput','#sentPickInput','#sentFileInput'].forEach(sel=>{
   $(sel).onchange=e=>{ const fs=e.target.files; const list=fs?[].slice.call(fs):[]; e.target.value=''; if(list.length) sentFromFiles(list); };
 });
-/* 「제목: OOO」이 본문 첫머리에 있으면 제목으로 올린다 */
-function splitTitle(body){
-  const lines=body.split('\n').map(s=>s.trim());
-  for(let i=0;i<Math.min(3,lines.length);i++){
-    const m=/^(?:제목|題名|タイトル|title)\s*[:：]\s*(.+)$/i.exec(lines[i]);
-    if(m){ lines.splice(i,1); return {title:m[1].trim(), body:lines.filter(Boolean).join('\n')}; }
-  }
-  return {title:'', body:lines.filter(Boolean).join('\n')};
-}
-$('#btnSentAdd').onclick=()=>{
-  const raw=$('#stBody').value.trim();
-  if(!raw){ toast('본문을 입력해 주세요.'); return; }
-  const s=splitTitle(raw);
-  openTextSheet(normText({title:$('#stTitle').value.trim()||s.title,
-                          date:$('#sentDate').value||todayStr(),
-                          target:$('#sentTarget').value,
-                          lines:s.body.split('\n')}));
-};
-$('#btnFuri').onclick=async ()=>{
-  const raw=$('#stBody').value.trim();
-  if(!raw){ toast('먼저 본문을 입력해 주세요.'); return; }
-  if(!AI.key||!AI.model){ sentSay('설정 → <b>사진 인식 (AI)</b>에서 API 키를 먼저 넣어 주세요.'); return; }
-  if(sentBusy) return;
-  sentBusy=true;
-  sentSay('<span class="spin" style="display:inline-block;vertical-align:-2px"></span> 후리가나를 다는 중…');
-  try{
-    const s=splitTitle(raw);
-    if(s.title && !$('#stTitle').value.trim()) $('#stTitle').value=s.title;
-    const o=await aiJson([{type:'text',text:s.body}], FURI_PROMPT);
-    const lines=(o.lines||[]).map(x=>String(x||'').trim()).filter(Boolean);
-    if(!lines.length) throw new Error('결과가 비어 있습니다.');
-    $('#stBody').value=lines.join('\n');
-    sentSay('후리가나를 달았습니다. 확인하고 <b>지문 추가</b>를 눌러 주세요.');
-  }catch(e){
-    sentSay('<b>실패</b> · '+esc((e&&e.message)||'처리하지 못했습니다.'));
-  }
-  sentBusy=false;
-};
 function renderSentAdd(){
   const d=$('#sentDate'); if(d && !d.value) d.value=todayStr();
   const t=$('#sentTarget'); if(t && !t.value) t.value=S.settings.readTarget||100;
-  if(!AI.key) sentSay('사진·문서에서 지문을 뽑으려면 설정에서 API 키가 필요합니다. <b>✍️ 직접</b> 탭은 키 없이도 쓸 수 있습니다.');
+  if(!AI.key) sentSay('사진·문서에서 지문을 뽑으려면 <b>설정</b>에서 API 키가 필요합니다.');
 }
 
 /* ===================== 삭제 (v2.5) =====================

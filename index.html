@@ -580,7 +580,7 @@
         <label class="row"><input type="checkbox" id="hideMeaning" style="width:auto"> <span>뜻을 먼저 가리고 보기 (탭하면 표시)</span></label>
       </div>
       <div class="card" id="installCard" style="display:none">
-        <div style="font-weight:800;margin-bottom:10px">휴대폰·PC에 설치</div>
+        <div style="font-weight:800;margin-bottom:10px">휴대폰에 설치</div>
         <button class="btn block sm primary" id="btnInstall" style="display:none">홈 화면에 추가</button>
         <div class="hint" id="installHint" style="margin:12px 0 0"></div>
         <button class="btn block sm" id="btnCheckUpdate" style="margin-top:10px">🔄 업데이트 확인</button>
@@ -627,7 +627,7 @@
         <button class="btn block sm" id="btnPacks">앱에 담긴 수업 단어 불러오기</button>
         <div style="height:8px"></div>
         <button class="btn block sm" id="btnReset" style="color:#b91c1c">전체 삭제</button>
-        <div class="hint" style="margin:12px 0 0">데이터는 이 기기의 브라우저 안에 저장되며, PC와 휴대폰은 따로 관리됩니다. <b>앱 파일을 새 버전으로 바꾸기 전에 백업을 먼저 내보내 주세요.</b> 휴대폰으로 옮길 때도 백업 파일을 내보낸 뒤 휴대폰에서 불러오면 됩니다.</div>
+        <div class="hint" style="margin:12px 0 0">담으신 단어와 학습 기록은 <b>이 기기 안에</b> 저장됩니다. <b>기기를 바꾸실 때는</b> 백업을 내보낸 뒤 새 기기에서 불러오세요.</div>
       </div>
       <div class="card">
         <div style="font-weight:800;margin-bottom:10px">약관 · 개인정보</div>
@@ -874,7 +874,7 @@
    ⚠ 스토어 표시 이름은 「오사라이 – 내 수업 일본어 단어장」(브랜드 + 검색어)이고,
    앱 안에서 쓰는 이름은 브랜드만이다. */
 const APP_NAME='오사라이';
-const APP_VER='v3.12';
+const APP_VER='v3.13';
 const APP_DATE='2026-09-08';   /* 마지막 수정일 */
 
 /* ===================== 저장소 ===================== */
@@ -3213,15 +3213,10 @@ function markBusy(on){
     hint.innerHTML = msg;
   }
 
-  /* PC에서 파일을 더블클릭해 연 경우(file://). 설치·자동 업데이트가 원래 불가능한 환경이므로
-     엉뚱한 안내 대신 웹 주소를 알려 준다. */
-  const isFile = location.protocol==='file:';
-  if(isFile){
-    const chk=$('#btnCheckUpdate'); if(chk) chk.style.display='none';
-    show('PC에서 파일을 직접 열어 실행 중입니다. 단어는 이 브라우저 안에 저장됩니다.<br>'+
-         '휴대폰 설치와 자동 업데이트는 웹 주소에서만 됩니다 — '+
-         '<b>ycimmich-cpu.github.io/japanese-vocab</b><br>'+
-         '새 버전은 이 파일을 새로 받아 바꿔 주세요. 바꾸기 전에 아래에서 <b>백업을 먼저 내보내세요.</b>', false);
+  /* 파일을 직접 열어 실행하는 경우(file://). 설치도 자동 업데이트도 원래 불가능하므로
+     «설명을 늘리는 대신» 설치 카드를 통째로 감춘다 — 눌러도 아무 일 없는 버튼을 두지 않는다 (v3.13). */
+  if(location.protocol==='file:'){
+    const card=$('#installCard'); if(card) card.style.display='none';
     return;
   }
   if(isStandalone){

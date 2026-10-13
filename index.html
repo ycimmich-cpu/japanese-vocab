@@ -254,6 +254,18 @@
   .stat .box .l{font-size:11px;color:var(--sub);font-weight:700;margin-top:2px}
   .hint{font-size:12px;color:var(--sub);line-height:1.7;background:var(--soft);padding:12px 14px;border-radius:14px;margin-bottom:12px}
   .verline{text-align:center;color:var(--sub);font-size:11px;letter-spacing:.2px;padding:22px 0 6px;opacity:.85}
+  /* ---------- C-5 초기화면 사업자 정보 (2026-10-13) ----------
+     「전자상거래 등에서의 소비자보호에 관한 법률」 제10조 —
+     사업자 정보를 «알아보기 쉽게 사이버몰의 초기화면에 표시»하여야 한다.
+     🔴 접어 두지 않는다. 펼치기 뒤에 숨기면 「초기화면에 표시」인지 다툴 여지가 생긴다.
+        작게, 그러나 «보이게» 둔다.
+     ⚠ 법률 판단은 전문가에게 묻는다 — 우리는 조문이 요구하는 자리에 두는 것까지만 한다. */
+  .bizinfo{margin:18px auto 0;max-width:420px;text-align:center;
+           color:var(--sub);font-size:11px;line-height:1.75;opacity:.9}
+  .bizinfo b{color:var(--ink);font-weight:700}
+  .bizinfo a{color:var(--sub)}
+  .bizlinks{margin:8px 0 0;display:flex;gap:14px;justify-content:center;font-size:11px}
+  .bizlinks a{color:var(--sub);text-decoration:underline;text-underline-offset:2px}
   code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:var(--soft);padding:1px 5px;border-radius:6px}
 
   /* ---------- 사진으로 추가 (v2.3) ---------- */
@@ -391,6 +403,18 @@
         <div class="grow"><div class="pt">문장 읽기</div><div class="ps" id="pickSentMeta">지문을 소리 내어 반복</div></div>
         <div class="chev">›</div>
       </button>
+      <!-- C-5 — 전자상거래법 제10조 사업자 정보 (초기화면) · 2026-10-13 신설.
+           ⚠ 설정 화면의 같은 내용과 «함께» 고친다. 둘이 어긋나면 린터가 멈춘다 -->
+      <div class="bizinfo">
+        <b>서울소프트612</b> · 대표 임연찬 · 사업자등록번호 854-41-00021<br>
+        통신판매업 신고번호 <b>제 2026-충남천안-2292 호</b><br>
+        충청남도 천안시 서북구 3공단6로 58-5, 4층 406~407호 ·
+        <a href="mailto:help@osarai.kr">help@osarai.kr</a>
+        <div class="bizlinks">
+          <a href="./privacy.html" target="_blank" rel="noopener">개인정보처리방침</a>
+          <a href="./terms.html" target="_blank" rel="noopener">이용약관</a>
+        </div>
+      </div>
       <div class="verline"></div>
     </div>
   </section>

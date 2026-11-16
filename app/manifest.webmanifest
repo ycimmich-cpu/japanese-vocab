@@ -1,0 +1,37 @@
+{
+  "name": "오사라이 – 내 수업 일본어 단어장",
+  "short_name": "오사라이",
+  "description": "수업에서 받은 프린트를 사진 한 장으로 담고, 그날 배운 것만 골라 외웁니다.",
+  "lang": "ko",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "id": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eceef1",
+  "theme_color": "#111213",
+  "categories": [
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

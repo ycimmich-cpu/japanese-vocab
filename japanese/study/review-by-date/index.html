@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>일본어 단어를 수업 날짜별로 다시 보는 방법 — 수업 따라 외우기 — 오사라이</title>
+<meta name="description" content="수업 날짜별로 다시 보는 흐름 — よし/まだ로 나누고 모르는 것만, 그날 것만 다시. 한 주 쓰는 모습과 퀴즈·발음·획순.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://osarai.kr/japanese/study/review-by-date/">
+<meta property="og:title" content="일본어 단어를 수업 날짜별로 다시 보는 방법 — 수업 따라 외우기 — 오사라이">
+<meta property="og:description" content="수업 날짜별로 다시 보는 흐름 — よし/まだ로 나누고 모르는 것만, 그날 것만 다시. 한 주 쓰는 모습과 퀴즈·발음·획순.">
+<meta property="og:image" content="https://osarai.kr/img/og.png">
+<meta name="theme-color" content="#111213">
+<meta name="naver-site-verification" content="0a697169c75368fd9056c936dc60350ce1251074" />
+<link rel="icon" href="/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="canonical" href="https://osarai.kr/japanese/study/review-by-date/">
+<style>:root{--page:#fbf8f2;--card:#fff;--ink:#16181d;--sub:#5b626e;--line:#e7e2d8;--soft:#f3efe6;--accent:#c8442e;--accent-soft:#f9ece7}
+@media (prefers-color-scheme:dark){:root{--page:#0f1115;--card:#171a20;--ink:#eef1f5;--sub:#98a1ae;--line:#262b33;--soft:#181b21;--accent:#ef7a63;--accent-soft:#2a1d1a}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--page);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;line-height:1.7;-webkit-text-size-adjust:100%}
+a{color:var(--accent)}
+.wrap{max-width:960px;margin:0 auto;padding:0 16px}
+main.wrap{min-height:60vh}
+/* 위 메뉴 */
+nav.top{position:sticky;top:0;z-index:5;background:var(--page);border-bottom:1px solid var(--line)}
+nav.top .wrap{display:flex;align-items:center;gap:14px;height:52px;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+nav.top .wrap::-webkit-scrollbar{display:none}
+nav.top a{color:var(--sub);text-decoration:none;font-size:14px}
+nav.top a.on{color:var(--ink);font-weight:700}
+nav.top a.home{display:flex;align-items:center;gap:6px;color:var(--ink);font-weight:800;font-size:15px;margin-right:auto}
+nav.top a.home img{border-radius:6px}
+nav.top a.get{color:var(--page);background:var(--ink);padding:6px 12px;border-radius:999px;font-weight:700}
+nav.top .s{display:none}
+@media (max-width:560px){nav.top .wrap{gap:10px}nav.top .l{display:none}nav.top .s{display:inline}nav.top a.app{display:none}nav.top a{font-size:13px}nav.top a.get{padding:5px 10px}}
+/* 공통 */
+.crumb{margin:16px 0 0;font-size:13px;color:var(--sub)}
+.crumb a{color:var(--sub)}
+h1{margin:14px 0 10px;font-size:clamp(24px,5vw,34px);line-height:1.35;word-break:keep-all}
+h2{margin:0 0 6px;font-size:22px;word-break:keep-all}
+.sub{margin:0 0 22px;color:var(--sub);word-break:keep-all}
+.lead{margin:0 auto;max-width:600px;color:var(--sub);font-size:16px;word-break:keep-all}
+.cta{display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:13px 22px;border-radius:12px;background:var(--ink);color:var(--page);text-decoration:none;font-weight:700}
+.cta small{font-weight:400;opacity:.8}
+.cta.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.note{margin-top:10px;font-size:13px;color:var(--sub);word-break:keep-all}
+section{padding:36px 0;border-top:1px solid var(--line);scroll-margin-top:56px}
+header.hero{padding:44px 0 28px;text-align:center}
+.logo{width:72px;height:72px;border-radius:18px}
+.brand{margin:12px 0 0;font-size:14px;letter-spacing:.4em;color:var(--sub)}
+.warn{background:var(--soft);border-radius:12px;padding:12px 14px;font-size:14px;color:var(--sub);margin-top:16px;word-break:keep-all}
+/* 카드 */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:8px 0 24px}
+.cards.list{grid-template-columns:1fr}
+.card{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;text-decoration:none;color:var(--ink)}
+.card:hover{border-color:var(--accent)}
+.card b{display:block;font-size:16px;word-break:keep-all}
+.card span{display:block;font-size:14px;color:var(--sub);word-break:keep-all;margin-top:2px}
+.card small{display:block;font-size:12px;color:var(--sub);margin-top:6px}
+.card .n{display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;background:var(--accent);color:#fff;font-size:13px;font-weight:700;margin:0 0 6px}
+@media (max-width:720px){.cards{grid-template-columns:1fr}}
+/* 첫 화면 — 앱 고르기 · 처음 오셨나요 */
+.apps{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px}
+.app{display:flex;flex-direction:column;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;text-decoration:none;color:var(--ink)}
+.app.live{border-color:var(--accent)}
+.app img{border-radius:12px;margin-bottom:6px}
+.app b{font-size:18px}
+.app span{font-size:14px;color:var(--sub);word-break:keep-all}
+.app em{font-style:normal;color:var(--accent);font-weight:700;margin-top:6px}
+.app.soon{opacity:.6;border-style:dashed}
+@media (max-width:720px){.apps{grid-template-columns:1fr 1fr}.app.live{grid-column:1/-1}}
+.first{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;counter-reset:f}
+.first a{counter-increment:f;display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;text-decoration:none;color:var(--ink)}
+.first a::before{content:counter(f);display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:14px;margin-bottom:6px}
+.first b{display:block}.first span{font-size:14px;color:var(--sub);word-break:keep-all}
+@media (max-width:720px){.first{grid-template-columns:1fr}}
+/* 글(설명서·공부법·자료) */
+.doc{max-width:720px;margin:0 auto 40px}
+.doc .kicker{margin:22px 0 0;font-size:13px;color:var(--accent);font-weight:700}
+.doc h2{margin:30px 0 8px;font-size:20px}
+.doc h3{margin:22px 0 6px;font-size:17px}
+.doc p,.doc li{word-break:keep-all}
+.doc a{overflow-wrap:anywhere}
+.doc table{border-collapse:collapse;width:100%;margin:10px 0 18px;font-size:14px;display:block;overflow-x:auto}
+.doc th,.doc td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+.doc th{background:var(--soft)}
+.doc blockquote{margin:14px 0;padding:10px 14px;background:var(--soft);border-left:3px solid var(--accent);border-radius:6px;color:var(--sub)}
+.doc code{background:var(--soft);padding:1px 5px;border-radius:4px;font-size:.92em}
+figure.shot{margin:18px auto;max-width:300px;text-align:center}
+figure.shot img{width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+figure.shot figcaption{font-size:13px;color:var(--sub);margin-top:6px;word-break:keep-all}
+figure.shot.todo div{border:1px dashed var(--line);border-radius:12px;padding:40px 10px;color:var(--sub);font-size:13px;background:var(--soft)}
+.toc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 14px;margin:6px 0 18px}
+.toc summary{cursor:pointer;font-weight:700;font-size:14px}
+.toc ol{margin:8px 0 4px;padding-left:22px;font-size:14px}
+.toc a{color:var(--sub);text-decoration:none}.toc a.on{color:var(--ink);font-weight:700}
+.pn{display:flex;justify-content:space-between;gap:10px;margin:34px 0 0;padding-top:16px;border-top:1px solid var(--line);font-size:14px}
+.pn a{text-decoration:none}.pn .next{margin-left:auto;text-align:right;font-weight:700}
+.orig{margin-top:28px;font-size:13px;color:var(--sub)}
+.after{margin-top:24px;text-align:center}
+.res{list-style:none;padding:0}
+/* 영상 · 단계 (일본어 앱 소개) */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.step{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;text-align:center}
+.step img{width:100%;max-width:240px;height:auto;border-radius:10px;display:block;margin:0 auto 10px}
+.step b{display:block;font-size:16px}
+.step span{font-size:14px;color:var(--sub);word-break:keep-all}
+.num{display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:14px;margin-bottom:6px}
+@media (max-width:720px){.steps{grid-template-columns:1fr}.step img{max-width:280px}}
+.videos{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.video{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
+.video .frame{position:relative;width:100%;aspect-ratio:9/16;border-radius:10px;overflow:hidden;background:var(--soft)}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.video b{display:block;margin-top:8px;font-size:15px;word-break:keep-all}
+@media (max-width:720px){.videos{grid-template-columns:1fr}.video{max-width:340px;margin:0 auto;width:100%}}
+ul.facts{margin:0;padding-left:20px}ul.facts li{margin:4px 0;word-break:keep-all}
+.price{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.box h3{margin:0 0 4px;font-size:16px}.box .won{font-size:24px;font-weight:800;margin:2px 0 8px}
+@media (max-width:560px){.price{grid-template-columns:1fr}}
+/* 질문 */
+.faq h3{margin:22px 0 6px;font-size:15px;color:var(--sub);font-weight:700}
+.faq details{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:8px 0;padding:0 14px}
+.faq summary{cursor:pointer;padding:12px 0;font-weight:700;word-break:keep-all;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::before{content:"＋ ";color:var(--accent)}
+.faq details[open] summary::before{content:"－ "}
+.faq details p{margin:0 0 12px;color:var(--sub);word-break:keep-all}
+.ask{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;text-align:center}
+.ask a{color:var(--ink);font-weight:700}
+/* 바닥 */
+footer{padding:30px 0 48px;border-top:1px solid var(--line);text-align:center;margin-top:20px}
+.foot-links{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;font-size:14px;margin-bottom:16px}
+.foot-links a{color:var(--ink);text-decoration:none}
+.bizinfo{margin:0 auto;max-width:460px;color:var(--sub);font-size:12px;line-height:1.8}
+.bizinfo b{color:var(--ink)}.bizinfo a{color:var(--sub)}
+.bizlinks{margin:10px 0 0;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:12px}
+.bizlinks a{color:var(--sub);text-decoration:underline;text-underline-offset:2px}
+.credit{margin-top:12px;font-size:11px;color:var(--sub)}
+/* 🆕 11-11 설명서 안 영상 한 편 */
+.video.one{max-width:320px;margin:18px auto 22px}
+/* 🆕 11-11 기간 한정 안내 띠 (JLPT 챌린지) */
+.banner{display:block;margin:6px 0 26px;padding:14px 16px;border-radius:14px;background:var(--accent-soft);border:1px solid var(--accent);color:var(--ink);text-decoration:none;word-break:keep-all}
+.banner b{display:block;color:var(--accent);font-size:16px}
+.banner span{font-size:14px;color:var(--sub)}
+/* 🆕 11-11 언어 카드 — 지금은 일본어 하나 */
+.apps{grid-template-columns:1fr}
+.soon-line{margin:4px 2px 0;font-size:13px;color:var(--sub)}
+</style>
+</head>
+<body>
+<nav class="top"><div class="wrap">
+  <a class="home" href="/"><img src="/img/icon-192.png" alt="" width="22" height="22">오사라이</a>
+  <a href="/japanese/" class="app ">일본어 앱</a><a href="/japanese/guide/" class=""><span class="l">설명서</span><span class="s">설명서</span></a><a href="/japanese/study/" class="on"><span class="l">공부법</span><span class="s">공부법</span></a><a href="/japanese/resources/" class=""><span class="l">공부 자료</span><span class="s">자료</span></a><a href="/japanese/faq/" class=""><span class="l">질문</span><span class="s">질문</span></a>
+  <a class="get" href="https://play.google.com/store/apps/details?id=kr.osarai.app&amp;referrer=utm_source%3Dosarai.kr%26utm_medium%3Dweb%26utm_campaign%3Dnav">앱 받기</a>
+</div></nav>
+<main class="wrap">
+<p class="crumb"><a href="/japanese/">일본어 앱</a> › <a href="/japanese/study/">공부법</a> › 일본어 단어를 수업 날짜별로 다시 보는 방법 — 수업 따라 외우기</p>
+<article class="doc"><p class="kicker">공부법 · 수업 복습</p><h1>일본어 단어를 수업 날짜별로 다시 보는 방법 — 수업 따라 외우기</h1><p>이 글의 앱 «오사라이»는 제가 일본어를 공부하면서 직접 만든 앱입니다. 개발자가 쓰는 글이라는 점을 먼저 밝혀 둡니다. 이 글에서는 수업에서 배운 단어를 <b>실제로 외우는 흐름</b>을 써 보겠습니다. 수업 프린트·PDF를 단어장으로 담는 방법은 다음 글에서 따로 쓸게요.</p>
+
+<h2>수업은 날짜로 진행됩니다</h2>
+<p>단어를 가나다순이나 레벨순으로 묶는 앱이 많습니다. 그런데 수업은 날짜로 진행되죠. «지난주 것만», «오늘 것만 다시»가 안 되면 수업을 따라가기 어렵습니다.</p>
+<p>그래서 오사라이는 <b>넣은 날짜(수업 회차)</b>가 기준입니다. 같은 날 안에서도 아침 수업과 저녁 보충처럼 묶음을 나눌 수 있습니다.</p>
+
+<h2>안다 / 모른다는 내가 정합니다</h2>
+<figure class="shot"><img src="/img/study/review-by-date-1.png" alt="카드 학습 «よし / まだ»" loading="lazy"><figcaption>카드 학습 «よし / まだ»</figcaption></figure>
+<p>카드를 넘기면서 아는 단어는 <b>よし(알고 있어요)</b>, 모르는 단어는 <b>まだ(더 학습할게요)</b>를 누릅니다.</p>
+<p>정답률로 자동 판정하지 않는 이유가 있습니다. 찍어서 맞힌 것과 아는 것은 다르니까요. 판단은 내가 하고, 앱은 그 기록을 모아 둡니다.</p>
+
+<h2>모르는 것만, 그날 것만</h2>
+<figure class="shot"><img src="/img/study/review-by-date-2.png" alt="«학습 시작»에서 まだ · 특정 날짜 고르기" loading="lazy"><figcaption>«학습 시작»에서 まだ · 특정 날짜 고르기</figcaption></figure>
+<p>아래 <b>🎯 학습</b> 탭에서 시작할 때 범위를 고릅니다(카드 학습 / 퀴즈).</p>
+<p>· 무엇을: 전체 / <b>まだ</b> / よし / 미분류<br>· 언제 것: 전체 기간 / 특정 달 / <b>특정 날짜</b><br>· 순서: 입력순 / 랜덤</p>
+<p>제가 실제로 쓰는 한 주는 이렇습니다.</p>
+<table>
+<tr><th>언제</th><th>무엇</th></tr>
+<tr><td>수업 날 밤</td><td>수업 자료를 그날 날짜로 담기</td></tr>
+<tr><td>다음 날 출근길</td><td>그 날짜 → 카드. よし / まだ 나누기</td></tr>
+<tr><td>그다음 날 점심</td><td>그 날짜 + まだ만 → 모르는 것만 다시</td></tr>
+<tr><td>다음 수업 전</td><td>지난달 전체 + まだ만 → 퀴즈 한 판</td></tr>
+</table>
+<p>담는 건 잠깐이고, 나머지는 다시 보는 시간입니다.</p>
+
+<h2>퀴즈와 발음</h2>
+<figure class="shot"><img src="/img/study/review-by-date-3.png" alt="퀴즈" loading="lazy"><figcaption>퀴즈</figcaption></figure>
+<p>퀴즈는 «단어 → 뜻», «뜻 → 단어», «듣고 맞추기» 세 가지이고, 답을 고르면 예문까지 읽어 줍니다. 틀린 단어는 まだ 로 돌아가서 다음에 다시 나옵니다. 발음은 휴대폰의 일본어 음성으로 들려줍니다(소리가 안 나면 휴대폰 설정에서 일본어 음성 데이터를 받아 주세요).</p>
+
+<h2>한자 획순</h2>
+<figure class="shot"><img src="/img/study/review-by-date-4.png" alt="한자 획순" loading="lazy"><figcaption>한자 획순</figcaption></figure>
+<p>한자 2,325자의 획순이 앱 안에 들어 있어서, 인터넷이 없어도 한 획씩 보여 줍니다. 카드·퀴즈·획순 같은 학습 기능은 모두 인터넷 없이 되기 때문에 지하철이나 비행기에서도 그대로 쓸 수 있습니다.</p>
+
+<h2>JLPT 레벨에 대해</h2>
+<p>단어를 담을 때 JLPT 레벨이 붙는데, 이건 AI가 <b>추정</b>한 값입니다. 공식 목록과 다를 수 있으니 참고로만 봐 주세요. 시험 준비의 중심은 어디까지나 수업과 교재이고, 이 앱은 그 단어를 놓치지 않게 다시 보게 해 주는 도구입니다.</p>
+
+<h2>써 보실 분께</h2>
+<p>· 카드·퀴즈·발음·획순은 <b>횟수 제한 없이 무료</b>입니다. 사진·문서 인식은 가입 없이 10회까지 무료예요.<br>· 지금은 안드로이드(구글 플레이)만 있습니다.</p>
+<p>Google Play에서 «오사라이»를 검색하시거나 아래 링크로 들어가실 수 있습니다.<br><a href="https://play.google.com/store/apps/details?id=kr.osarai.app&amp;referrer=utm_source%3Dosarai.kr%26utm_medium%3Dstudy%26utm_campaign%3Dpost2">https://play.google.com/store/apps/details?id=kr.osarai.app&amp;referrer=utm_source%3Dosarai.kr%26utm_medium%3Dstudy%26utm_campaign%3Dpost2</a></p>
+<p>불편한 점은 help@osarai.kr 로 알려 주세요. 다음 글에서는 수업 프린트·PDF를 단어장으로 담는 방법을 써 보겠습니다.</p><p class="orig">처음 실린 곳: <a href="https://blog.naver.com/print1jp/224471802881" rel="noopener">네이버 블로그 «프린트 한 장 일본어»</a> · 2026-11-10</p><div class="after"><a class="cta" href="https://play.google.com/store/apps/details?id=kr.osarai.app&amp;referrer=utm_source%3Dosarai.kr%26utm_medium%3Dweb%26utm_campaign%3Dstudy">Google Play에서 받기 <small>· 안드로이드</small></a><p><a href="/japanese/study/">다른 공부법 글 보기 →</a></p></div></article>
+</main>
+<footer><div class="wrap">
+  <div class="foot-links"><a href="/japanese/guide/">설명서</a><a href="/japanese/study/">공부법</a><a href="/japanese/resources/">공부 자료</a><a href="/japanese/faq/">자주 묻는 질문</a><a href="/news/">소식</a><a href="/about/">만든 이유</a><a href="/support/">문의</a></div>
+  <div class="bizinfo">
+    <b>서울소프트612</b> · 대표 임연찬 · 사업자등록번호 854-41-00021<br>
+    통신판매업 신고번호 <b>제 2026-충남천안-2292 호</b><br>
+    충청남도 천안시 서북구 3공단6로 58-5, 4층 406~407호 ·
+    <a href="mailto:help@osarai.kr">help@osarai.kr</a>
+    <div class="bizlinks"><a href="/privacy.html">개인정보처리방침</a><a href="/terms.html">이용약관</a><a href="/delete-account.html">계정 삭제</a></div>
+  </div>
+  <p class="credit">한자 획순 자료: KanjiVG © Ulrich Apel, CC BY-SA 3.0</p>
+</div></footer>
+</body>
+</html>
